@@ -3,7 +3,8 @@
 import React, { useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { CheckCircle, Download, Calendar, MapPin, Users, CreditCard } from 'lucide-react';
+import { CheckCircle, Download, Calendar, MapPin, Users, CreditCard, FileText, Printer } from 'lucide-react';
+import Link from 'next/link';
 import Navbar from '../../../components/layout/Navbar';
 import Footer from '../../../components/layout/Footer';
 import { getBookingStatus } from '../../../lib/api';
@@ -18,6 +19,7 @@ interface BookingDetails {
   totalAmount: number;
   status: string;
   createdAt: string;
+  travelDate: string;
   route?: {
     from: string;
     to: string;
@@ -58,25 +60,27 @@ export default function BookingSuccessPage() {
   };
 
   const downloadTicket = () => {
-    // Create a simple ticket download
+    if (!booking) return;
+
     const ticketContent = `
 NATURE TRAVEL BOOKING CONFIRMATION
 ================================
 
-Booking Reference: ${booking?.bookingReference}
-Customer: ${booking?.customerName}
-Email: ${booking?.email}
-Phone: ${booking?.phone}
+Booking Reference: ${booking.bookingReference}
+Customer: ${booking.customerName}
+Email: ${booking.email}
+Phone: ${booking.phone}
 
 Journey Details:
-From: ${booking?.route?.from}
-To: ${booking?.route?.to}
-Vehicle: ${booking?.vehicle?.name} (${booking?.vehicle?.type})
-Seats: ${booking?.seatIds.length}
-Amount: LKR ${booking?.totalAmount?.toFixed(2)}
+From: ${booking.route?.from}
+To: ${booking.route?.to}
+Travel Date: ${booking.travelDate ? new Date(booking.travelDate).toLocaleDateString() : 'Not specified'}
+Vehicle: ${booking.vehicle?.name} (${booking.vehicle?.type})
+Seats: ${booking.seatIds.length}
+Amount: LKR ${booking.totalAmount?.toFixed(2)}
 
-Status: ${booking?.status}
-Booked on: ${new Date(booking?.createdAt || '').toLocaleDateString()}
+Status: ${booking.status}
+Booked on: ${new Date(booking.createdAt || '').toLocaleDateString()}
 
 Thank you for choosing Nature Travel!
     `;
@@ -85,7 +89,7 @@ Thank you for choosing Nature Travel!
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `ticket-${booking?.bookingReference}.txt`;
+    a.download = `ticket-${booking.bookingReference}.txt`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -160,13 +164,22 @@ Thank you for choosing Nature Travel!
                   <h2 className="text-2xl font-bold">Booking Confirmation</h2>
                   <p className="opacity-90">Reference: {booking.bookingReference}</p>
                 </div>
-                <button
-                  onClick={downloadTicket}
-                  className="flex items-center space-x-2 bg-white/20 hover:bg-white/30 px-4 py-2 rounded-lg transition-colors"
-                >
-                  <Download className="w-4 h-4" />
-                  <span>Download</span>
-                </button>
+                <div className="flex space-x-3">
+                  <Link
+                    href={`/booking/invoice?booking=${booking.bookingReference}`}
+                    className="flex items-center space-x-2 bg-white/20 hover:bg-white/30 px-4 py-2 rounded-lg transition-colors"
+                  >
+                    <FileText className="w-4 h-4" />
+                    <span>View Invoice</span>
+                  </Link>
+                  <button
+                    onClick={downloadTicket}
+                    className="flex items-center space-x-2 bg-white/20 hover:bg-white/30 px-4 py-2 rounded-lg transition-colors"
+                  >
+                    <Download className="w-4 h-4" />
+                    <span>Download</span>
+                  </button>
+                </div>
               </div>
             </div>
 
@@ -182,6 +195,16 @@ Thank you for choosing Nature Travel!
                     <div>
                       <p className="font-medium text-gray-900">Route</p>
                       <p className="text-gray-600">{booking.route?.from} → {booking.route?.to}</p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start space-x-3">
+                    <Calendar className="w-5 h-5 text-primary-600 mt-1" />
+                    <div>
+                      <p className="font-medium text-gray-900">Travel Date</p>
+                      <p className="text-gray-600">
+                        {booking.travelDate ? new Date(booking.travelDate).toLocaleDateString() : 'Not specified'}
+                      </p>
                     </div>
                   </div>
 
@@ -237,6 +260,35 @@ Thank you for choosing Nature Travel!
               </div>
             </div>
           </div>
+
+          {/* Action Buttons */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3, duration: 0.6 }}
+            className="mt-8 flex flex-col sm:flex-row gap-4 justify-center"
+          >
+            <Link
+              href={`/booking/invoice?booking=${booking.bookingReference}`}
+              className="inline-flex items-center justify-center px-6 py-3 bg-primary-600 text-white font-semibold rounded-xl hover:bg-primary-700 transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl"
+            >
+              <Printer className="w-5 h-5 mr-2" />
+              Print Invoice
+            </Link>
+            <button
+              onClick={downloadTicket}
+              className="inline-flex items-center justify-center px-6 py-3 bg-gray-600 text-white font-semibold rounded-xl hover:bg-gray-700 transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl"
+            >
+              <Download className="w-5 h-5 mr-2" />
+              Download Ticket
+            </button>
+            <Link
+              href="/"
+              className="inline-flex items-center justify-center px-6 py-3 bg-white text-gray-700 font-semibold rounded-xl hover:bg-gray-50 transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl border border-gray-300"
+            >
+              Back to Home
+            </Link>
+          </motion.div>
 
           {/* Next Steps */}
           <motion.div

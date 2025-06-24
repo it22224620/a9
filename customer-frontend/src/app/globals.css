@@ -258,6 +258,63 @@
   @apply w-16 h-16 rounded-full object-cover mx-auto mb-4;
 }
 
+/* Print styles */
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  
+  .print-break {
+    page-break-after: always;
+  }
+  
+  /* Print-specific styles for invoice */
+  body {
+    @apply bg-white text-black;
+  }
+  
+  .bg-gradient-to-r {
+    background: #2563eb !important;
+    color: white !important;
+  }
+  
+  .shadow-xl,
+  .shadow-lg {
+    box-shadow: none !important;
+  }
+  
+  .border {
+    border: 1px solid #e5e7eb !important;
+  }
+  
+  /* Ensure proper spacing for print */
+  .container-custom {
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+  
+  /* Hide interactive elements when printing */
+  button,
+  .hover\:scale-105,
+  .transition-all {
+    display: none !important;
+  }
+  
+  /* Ensure text is readable */
+  .text-white {
+    color: white !important;
+  }
+  
+  .text-gray-900 {
+    color: #111827 !important;
+  }
+  
+  .text-gray-600 {
+    color: #4b5563 !important;
+  }
+}
+
 /* Responsive utilities */
 @media (max-width: 640px) {
   .hero-text {
@@ -270,12 +327,5 @@
   
   .section-padding {
     @apply py-12 px-4;
-  }
-}
-
-/* Print styles */
-@media print {
-  .no-print {
-    display: none !important;
   }
 }

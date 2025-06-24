@@ -15,7 +15,7 @@ export class Booking {
     this.bookingType = data.booking_type;
     this.totalAmount = data.total_amount;
     this.status = data.status; // 'pending', 'confirmed', 'cancelled'
-    this.travelDate = data.travel_date; // NEW: Travel date
+    this.travelDate = data.travel_date; // Travel date
     this.createdAt = data.created_at;
     
     // Handle joined route data
@@ -51,7 +51,7 @@ export class Booking {
           seat_ids: bookingData.seatIds,
           booking_type: bookingData.bookingType,
           total_amount: bookingData.totalAmount,
-          travel_date: bookingData.travelDate, // NEW: Include travel date
+          travel_date: bookingData.travelDate, // Include travel date
           status: 'pending'
         }])
         .select()
@@ -146,9 +146,9 @@ export class Booking {
     }
   }
 
-  static async findAll(limit = 50, offset = 0) {
+  static async findAll(limit = 50, offset = 0, filters = {}) {
     try {
-      const { data, error } = await supabase
+      let query = supabase
         .from('bookings')
         .select(`
           *,
@@ -169,6 +169,22 @@ export class Booking {
         .order('created_at', { ascending: false })
         .range(offset, offset + limit - 1);
 
+      // Apply filters
+      if (filters.status) {
+        query = query.eq('status', filters.status);
+      }
+      if (filters.travelDate) {
+        query = query.eq('travel_date', filters.travelDate);
+      }
+      if (filters.email) {
+        query = query.eq('email', filters.email);
+      }
+      if (filters.bookingReference) {
+        query = query.eq('booking_reference', filters.bookingReference);
+      }
+
+      const { data, error } = await query;
+
       if (error) throw error;
       return { success: true, data: data.map(booking => new Booking(booking)) };
     } catch (error) {
@@ -176,7 +192,7 @@ export class Booking {
     }
   }
 
-  // NEW: Find bookings by travel date
+  // Find bookings by travel date
   static async findByTravelDate(travelDate, limit = 50) {
     try {
       const { data, error } = await supabase
@@ -241,7 +257,7 @@ export class Booking {
     }
   }
 
-  // NEW: Admin operations for full CRUD access
+  // Admin operations for full CRUD access
   static async adminUpdate(id, updateData, adminId) {
     try {
       // Get old data for audit trail
@@ -281,6 +297,65 @@ export class Booking {
       await this.logAdminOperation(adminId, 'delete', 'bookings', id, booking.data, null);
 
       return { success: true };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  }
+
+  static async getBookingsByDateRange(startDate, endDate, filters = {}) {
+    try {
+      let query = supabase
+        .from('bookings')
+        .select(`
+          *,
+          routes:route_id (
+            id,
+            origin_city,
+            destination_city,
+            description
+          ),
+          vehicles:vehicle_id (
+            id,
+            name,
+            type,
+            booking_type,
+            departure_time
+          )
+        `)
+        .gte('travel_date', startDate)
+        .lte('travel_date', endDate)
+        .order('travel_date', { ascending: true });
+
+      // Apply additional filters
+      if (filters.status) {
+        query = query.eq('status', filters.status);
+      }
+
+      const { data, error } = await query;
+
+      if (error) throw error;
+
+      const bookings = data.map(booking => new Booking(booking));
+
+      // Calculate summary statistics
+      const summary = {
+        totalBookings: bookings.length,
+        totalRevenue: bookings.reduce((sum, booking) => sum + parseFloat(booking.totalAmount), 0),
+        statusBreakdown: {
+          pending: bookings.filter(b => b.status === 'pending').length,
+          confirmed: bookings.filter(b => b.status === 'confirmed').length,
+          cancelled: bookings.filter(b => b.status === 'cancelled').length
+        }
+      };
+
+      return {
+        success: true,
+        data: {
+          bookings,
+          summary,
+          dateRange: { startDate, endDate }
+        }
+      };
     } catch (error) {
       return { success: false, error: error.message };
     }
