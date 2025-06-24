@@ -1,0 +1,30 @@
+{
+  "name": "travel-booking-system",
+  "version": "1.0.0",
+  "description": "Travel & Tourism Vehicle Booking System - Monorepo",
+  "type": "module",
+  "scripts": {
+    "dev": "cd project && npm run dev",
+    "start": "cd project && npm start",
+    "install-all": "npm install && cd project && npm install && cd ../admin-dashboard && npm install && cd ../customer-frontend && npm install",
+    "dev:backend": "cd project && npm run dev",
+    "dev:admin": "cd admin-dashboard && npm run dev",
+    "dev:frontend": "cd customer-frontend && npm run dev"
+  },
+  "keywords": [
+    "travel",
+    "booking",
+    "tourism",
+    "vehicle",
+    "nodejs",
+    "express",
+    "supabase"
+  ],
+  "author": "",
+  "license": "MIT",
+  "workspaces": [
+    "project",
+    "admin-dashboard",
+    "customer-frontend"
+  ]
+}
