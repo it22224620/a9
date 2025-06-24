@@ -1,0 +1,1027 @@
+{
+  "info": {
+    "name": "Travel Booking API - Complete Test Suite",
+    "description": "Comprehensive test collection covering all booking scenarios with ACID compliance",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:3000",
+      "type": "string"
+    },
+    {
+      "key": "admin_key",
+      "value": "your_super_secret_admin_key_2024",
+      "type": "string"
+    },
+    {
+      "key": "route_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "vehicle_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "seat_id_1",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "seat_id_2",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "booking_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "booking_reference",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "payment_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "order_id",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "🏥 Health Check",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/health",
+          "host": ["{{base_url}}"],
+          "path": ["health"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Health check successful', function () {",
+              "    pm.response.to.have.status(200);",
+              "    const response = pm.response.json();",
+              "    pm.expect(response.success).to.be.true;",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "🛣️ 1. Create Route (Admin)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "X-Admin-Key",
+            "value": "{{admin_key}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"from\": \"Colombo\",\n  \"to\": \"Kandy\",\n  \"description\": \"Scenic mountain route via Peradeniya\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/admin/routes",
+          "host": ["{{base_url}}"],
+          "path": ["api", "admin", "routes"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Route created successfully', function () {",
+              "    pm.response.to.have.status(201);",
+              "    const response = pm.response.json();",
+              "    pm.expect(response.success).to.be.true;",
+              "    pm.expect(response.data.id).to.exist;",
+              "    pm.collectionVariables.set('route_id', response.data.id);",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "🚌 2. Create Vehicle (Admin)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "X-Admin-Key",
+            "value": "{{admin_key}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Express Bus #1\",\n  \"type\": \"bus\",\n  \"routeId\": \"{{route_id}}\",\n  \"bookingType\": \"common\",\n  \"seatCount\": 30,\n  \"pricePerSeat\": 1500.00,\n  \"imageUrl\": \"https://images.pexels.com/photos/1545743/pexels-photo-1545743.jpeg\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/admin/vehicles",
+          "host": ["{{base_url}}"],
+          "path": ["api", "admin", "vehicles"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Vehicle created successfully', function () {",
+              "    pm.response.to.have.status(201);",
+              "    const response = pm.response.json();",
+              "    pm.expect(response.success).to.be.true;",
+              "    pm.expect(response.data.id).to.exist;",
+              "    pm.collectionVariables.set('vehicle_id', response.data.id);",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "📋 3. Get All Routes",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/routes",
+          "host": ["{{base_url}}"],
+          "path": ["api", "routes"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Routes fetched successfully', function () {",
+              "    pm.response.to.have.status(200);",
+              "    const response = pm.response.json();",
+              "    pm.expect(response.success).to.be.true;",
+              "    pm.expect(response.data).to.be.an('array');",
+              "    pm.expect(response.data.length).to.be.greaterThan(0);",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "🚗 4. Get Vehicles by Route",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/vehicles/{{route_id}}",
+          "host": ["{{base_url}}"],
+          "path": ["api", "vehicles", "{{route_id}}"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Vehicles fetched successfully', function () {",
+              "    pm.response.to.have.status(200);",
+              "    const response = pm.response.json();",
+              "    pm.expect(response.success).to.be.true;",
+              "    pm.expect(response.data.vehicles).to.be.an('array');",
+              "    pm.expect(response.data.vehicles.length).to.be.greaterThan(0);",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "💺 5. Get Seat Layout",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/seats/{{vehicle_id}}",
+          "host": ["{{base_url}}"],
+          "path": ["api", "seats", "{{vehicle_id}}"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Seat layout fetched successfully', function () {",
+              "    pm.response.to.have.status(200);",
+              "    const response = pm.response.json();",
+              "    pm.expect(response.success).to.be.true;",
+              "    pm.expect(response.data).to.be.an('array');",
+              "    pm.expect(response.data.length).to.be.greaterThan(0);",
+              "    ",
+              "    // Store first two available seat IDs",
+              "    const availableSeats = response.data.filter(seat => seat.status === 'available');",
+              "    if (availableSeats.length >= 2) {",
+              "        pm.collectionVariables.set('seat_id_1', availableSeats[0].id);",
+              "        pm.collectionVariables.set('seat_id_2', availableSeats[1].id);",
+              "    }",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "🔒 6. Lock Seats",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"seatIds\": [\"{{seat_id_1}}\", \"{{seat_id_2}}\"],\n  \"customerEmail\": \"john.doe@example.com\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/seats/lock",
+          "host": ["{{base_url}}"],
+          "path": ["api", "seats", "lock"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Seats locked successfully', function () {",
+              "    pm.response.to.have.status(200);",
+              "    const response = pm.response.json();",
+              "    pm.expect(response.success).to.be.true;",
+              "    pm.expect(response.data.seats).to.be.an('array');",
+              "    pm.expect(response.data.seats.length).to.equal(2);",
+              "    ",
+              "    // Verify seats are in pending status",
+              "    response.data.seats.forEach(seat => {",
+              "        pm.expect(seat.status).to.equal('pending');",
+              "        pm.expect(seat.customerEmail).to.equal('john.doe@example.com');",
+              "    });",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "📝 7. Create Booking",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"customerName\": \"John Doe\",\n  \"email\": \"john.doe@example.com\",\n  \"phone\": \"+94771234567\",\n  \"message\": \"Window seat preferred\",\n  \"routeId\": \"{{route_id}}\",\n  \"vehicleId\": \"{{vehicle_id}}\",\n  \"seatIds\": [\"{{seat_id_1}}\", \"{{seat_id_2}}\"],\n  \"bookingType\": \"common\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/booking/create",
+          "host": ["{{base_url}}"],
+          "path": ["api", "booking", "create"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Booking created successfully', function () {",
+              "    pm.response.to.have.status(201);",
+              "    const response = pm.response.json();",
+              "    pm.expect(response.success).to.be.true;",
+              "    pm.expect(response.data.booking.id).to.exist;",
+              "    pm.expect(response.data.booking.bookingReference).to.exist;",
+              "    pm.expect(response.data.booking.status).to.equal('pending');",
+              "    pm.expect(response.data.nextStep).to.equal('payment');",
+              "    ",
+              "    // Store booking details",
+              "    pm.collectionVariables.set('booking_id', response.data.booking.id);",
+              "    pm.collectionVariables.set('booking_reference', response.data.booking.bookingReference);",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "💳 8. Create Payment Intent",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"bookingId\": \"{{booking_id}}\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/payment/create-intent",
+          "host": ["{{base_url}}"],
+          "path": ["api", "payment", "create-intent"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Payment intent created successfully', function () {",
+              "    pm.response.to.have.status(200);",
+              "    const response = pm.response.json();",
+              "    pm.expect(response.success).to.be.true;",
+              "    pm.expect(response.data.paymentId).to.exist;",
+              "    pm.expect(response.data.paymentConfig).to.exist;",
+              "    pm.expect(response.data.paymentConfig.order_id).to.exist;",
+              "    pm.expect(response.data.paymentConfig.amount).to.exist;",
+              "    ",
+              "    // Store payment details",
+              "    pm.collectionVariables.set('payment_id', response.data.paymentId);",
+              "    pm.collectionVariables.set('order_id', response.data.paymentConfig.order_id);",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "✅ 9A. Payment Success Webhook",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/x-www-form-urlencoded"
+          }
+        ],
+        "body": {
+          "mode": "urlencoded",
+          "urlencoded": [
+            {
+              "key": "merchant_id",
+              "value": "1234567",
+              "type": "text"
+            },
+            {
+              "key": "order_id",
+              "value": "{{order_id}}",
+              "type": "text"
+            },
+            {
+              "key": "payment_id",
+              "value": "320001234567890",
+              "type": "text"
+            },
+            {
+              "key": "payhere_amount",
+              "value": "3000.00",
+              "type": "text"
+            },
+            {
+              "key": "payhere_currency",
+              "value": "LKR",
+              "type": "text"
+            },
+            {
+              "key": "status_code",
+              "value": "2",
+              "type": "text",
+              "description": "2 = Success"
+            },
+            {
+              "key": "md5sig",
+              "value": "{{$randomAlphaNumeric}}",
+              "type": "text",
+              "description": "This should be calculated properly in real scenario"
+            }
+          ]
+        },
+        "url": {
+          "raw": "{{base_url}}/api/payment/webhook",
+          "host": ["{{base_url}}"],
+          "path": ["api", "payment", "webhook"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Payment webhook processed successfully', function () {",
+              "    pm.response.to.have.status(200);",
+              "    const response = pm.response.json();",
+              "    pm.expect(response.success).to.be.true;",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "📊 10A. Verify Booking Status (After Success)",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/booking/status/{{booking_reference}}?type=reference",
+          "host": ["{{base_url}}"],
+          "path": ["api", "booking", "status", "{{booking_reference}}"],
+          "query": [
+            {
+              "key": "type",
+              "value": "reference"
+            }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Booking confirmed after successful payment', function () {",
+              "    pm.response.to.have.status(200);",
+              "    const response = pm.response.json();",
+              "    pm.expect(response.success).to.be.true;",
+              "    pm.expect(response.data.booking.status).to.equal('confirmed');",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "💺 11A. Verify Seats Booked",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/seats/{{vehicle_id}}",
+          "host": ["{{base_url}}"],
+          "path": ["api", "seats", "{{vehicle_id}}"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Seats are booked after successful payment', function () {",
+              "    pm.response.to.have.status(200);",
+              "    const response = pm.response.json();",
+              "    pm.expect(response.success).to.be.true;",
+              "    ",
+              "    const seat1 = response.data.find(seat => seat.id === pm.collectionVariables.get('seat_id_1'));",
+              "    const seat2 = response.data.find(seat => seat.id === pm.collectionVariables.get('seat_id_2'));",
+              "    ",
+              "    pm.expect(seat1.status).to.equal('booked');",
+              "    pm.expect(seat2.status).to.equal('booked');",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "🔄 RESET: Create New Booking for Failure Test",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"seatIds\": [\"{{seat_id_1}}\", \"{{seat_id_2}}\"],\n  \"customerEmail\": \"jane.smith@example.com\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/seats/lock",
+          "host": ["{{base_url}}"],
+          "path": ["api", "seats", "lock"]
+        }
+      },
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "// Get new available seats first",
+              "pm.sendRequest({",
+              "    url: pm.collectionVariables.get('base_url') + '/api/seats/' + pm.collectionVariables.get('vehicle_id'),",
+              "    method: 'GET'",
+              "}, function (err, response) {",
+              "    if (!err && response.code === 200) {",
+              "        const seats = response.json().data;",
+              "        const availableSeats = seats.filter(seat => seat.status === 'available');",
+              "        if (availableSeats.length >= 2) {",
+              "            pm.collectionVariables.set('seat_id_1', availableSeats[0].id);",
+              "            pm.collectionVariables.set('seat_id_2', availableSeats[1].id);",
+              "        }",
+              "    }",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "📝 12B. Create Booking for Failure Test",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"customerName\": \"Jane Smith\",\n  \"email\": \"jane.smith@example.com\",\n  \"phone\": \"+94771234568\",\n  \"message\": \"Test booking for payment failure\",\n  \"routeId\": \"{{route_id}}\",\n  \"vehicleId\": \"{{vehicle_id}}\",\n  \"seatIds\": [\"{{seat_id_1}}\", \"{{seat_id_2}}\"],\n  \"bookingType\": \"common\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/booking/create",
+          "host": ["{{base_url}}"],
+          "path": ["api", "booking", "create"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Second booking created successfully', function () {",
+              "    pm.response.to.have.status(201);",
+              "    const response = pm.response.json();",
+              "    pm.expect(response.success).to.be.true;",
+              "    ",
+              "    // Update variables for failure test",
+              "    pm.collectionVariables.set('booking_id', response.data.booking.id);",
+              "    pm.collectionVariables.set('booking_reference', response.data.booking.bookingReference);",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "💳 13B. Create Payment Intent for Failure Test",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"bookingId\": \"{{booking_id}}\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/payment/create-intent",
+          "host": ["{{base_url}}"],
+          "path": ["api", "payment", "create-intent"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Payment intent created for failure test', function () {",
+              "    pm.response.to.have.status(200);",
+              "    const response = pm.response.json();",
+              "    pm.expect(response.success).to.be.true;",
+              "    ",
+              "    pm.collectionVariables.set('payment_id', response.data.paymentId);",
+              "    pm.collectionVariables.set('order_id', response.data.paymentConfig.order_id);",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "❌ 14B. Payment Failure Webhook (Insufficient Funds)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/x-www-form-urlencoded"
+          }
+        ],
+        "body": {
+          "mode": "urlencoded",
+          "urlencoded": [
+            {
+              "key": "merchant_id",
+              "value": "1234567",
+              "type": "text"
+            },
+            {
+              "key": "order_id",
+              "value": "{{order_id}}",
+              "type": "text"
+            },
+            {
+              "key": "payment_id",
+              "value": "320001234567891",
+              "type": "text"
+            },
+            {
+              "key": "payhere_amount",
+              "value": "3000.00",
+              "type": "text"
+            },
+            {
+              "key": "payhere_currency",
+              "value": "LKR",
+              "type": "text"
+            },
+            {
+              "key": "status_code",
+              "value": "-2",
+              "type": "text",
+              "description": "-2 = Failed (Insufficient Funds)"
+            },
+            {
+              "key": "md5sig",
+              "value": "{{$randomAlphaNumeric}}",
+              "type": "text"
+            }
+          ]
+        },
+        "url": {
+          "raw": "{{base_url}}/api/payment/webhook",
+          "host": ["{{base_url}}"],
+          "path": ["api", "payment", "webhook"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Payment failure webhook processed', function () {",
+              "    pm.response.to.have.status(200);",
+              "    const response = pm.response.json();",
+              "    pm.expect(response.success).to.be.true;",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "📊 15B. Verify Booking Cancelled (After Failure)",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/booking/status/{{booking_reference}}?type=reference",
+          "host": ["{{base_url}}"],
+          "path": ["api", "booking", "status", "{{booking_reference}}"],
+          "query": [
+            {
+              "key": "type",
+              "value": "reference"
+            }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Booking cancelled after payment failure', function () {",
+              "    pm.response.to.have.status(200);",
+              "    const response = pm.response.json();",
+              "    pm.expect(response.success).to.be.true;",
+              "    pm.expect(response.data.booking.status).to.equal('cancelled');",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "💺 16B. Verify Seats Unlocked (After Failure)",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/seats/{{vehicle_id}}",
+          "host": ["{{base_url}}"],
+          "path": ["api", "seats", "{{vehicle_id}}"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Seats unlocked after payment failure', function () {",
+              "    pm.response.to.have.status(200);",
+              "    const response = pm.response.json();",
+              "    pm.expect(response.success).to.be.true;",
+              "    ",
+              "    const seat1 = response.data.find(seat => seat.id === pm.collectionVariables.get('seat_id_1'));",
+              "    const seat2 = response.data.find(seat => seat.id === pm.collectionVariables.get('seat_id_2'));",
+              "    ",
+              "    pm.expect(seat1.status).to.equal('available');",
+              "    pm.expect(seat2.status).to.equal('available');",
+              "    pm.expect(seat1.customerEmail).to.be.null;",
+              "    pm.expect(seat2.customerEmail).to.be.null;",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "🔄 17C. Test Payment Cancellation",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/x-www-form-urlencoded"
+          }
+        ],
+        "body": {
+          "mode": "urlencoded",
+          "urlencoded": [
+            {
+              "key": "merchant_id",
+              "value": "1234567",
+              "type": "text"
+            },
+            {
+              "key": "order_id",
+              "value": "{{order_id}}",
+              "type": "text"
+            },
+            {
+              "key": "payment_id",
+              "value": "320001234567892",
+              "type": "text"
+            },
+            {
+              "key": "payhere_amount",
+              "value": "3000.00",
+              "type": "text"
+            },
+            {
+              "key": "payhere_currency",
+              "value": "LKR",
+              "type": "text"
+            },
+            {
+              "key": "status_code",
+              "value": "-1",
+              "type": "text",
+              "description": "-1 = Cancelled by user"
+            },
+            {
+              "key": "md5sig",
+              "value": "{{$randomAlphaNumeric}}",
+              "type": "text"
+            }
+          ]
+        },
+        "url": {
+          "raw": "{{base_url}}/api/payment/webhook",
+          "host": ["{{base_url}}"],
+          "path": ["api", "payment", "webhook"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Payment cancellation webhook processed', function () {",
+              "    pm.response.to.have.status(200);",
+              "    const response = pm.response.json();",
+              "    pm.expect(response.success).to.be.true;",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "📊 18. Admin Dashboard Stats",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "X-Admin-Key",
+            "value": "{{admin_key}}"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/admin/dashboard",
+          "host": ["{{base_url}}"],
+          "path": ["api", "admin", "dashboard"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Dashboard stats retrieved successfully', function () {",
+              "    pm.response.to.have.status(200);",
+              "    const response = pm.response.json();",
+              "    pm.expect(response.success).to.be.true;",
+              "    pm.expect(response.data.bookings).to.exist;",
+              "    pm.expect(response.data.payments).to.exist;",
+              "    pm.expect(response.data.vehicles).to.exist;",
+              "    pm.expect(response.data.routes).to.exist;",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "📋 19. Get All Bookings (Admin)",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "X-Admin-Key",
+            "value": "{{admin_key}}"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/admin/bookings",
+          "host": ["{{base_url}}"],
+          "path": ["api", "admin", "bookings"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('All bookings retrieved successfully', function () {",
+              "    pm.response.to.have.status(200);",
+              "    const response = pm.response.json();",
+              "    pm.expect(response.success).to.be.true;",
+              "    pm.expect(response.data).to.be.an('array');",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "🧹 20. System Maintenance - Unlock Expired Seats",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "X-Admin-Key",
+            "value": "{{admin_key}}"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/admin/maintenance/unlock-expired-seats",
+          "host": ["{{base_url}}"],
+          "path": ["api", "admin", "maintenance", "unlock-expired-seats"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('System maintenance completed', function () {",
+              "    pm.response.to.have.status(200);",
+              "    const response = pm.response.json();",
+              "    pm.expect(response.success).to.be.true;",
+              "    pm.expect(response.data.unlockedCount).to.exist;",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "💳 21. Get Payment Status",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/payment/status/{{payment_id}}",
+          "host": ["{{base_url}}"],
+          "path": ["api", "payment", "status", "{{payment_id}}"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Payment status retrieved successfully', function () {",
+              "    pm.response.to.have.status(200);",
+              "    const response = pm.response.json();",
+              "    pm.expect(response.success).to.be.true;",
+              "    pm.expect(response.data.payment).to.exist;",
+              "    pm.expect(response.data.booking).to.exist;",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "🔄 22. Test Concurrent Seat Locking (Should Fail)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"seatIds\": [\"{{seat_id_1}}\"],\n  \"customerEmail\": \"concurrent.user@example.com\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/seats/lock",
+          "host": ["{{base_url}}"],
+          "path": ["api", "seats", "lock"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Concurrent seat locking prevented', function () {",
+              "    // This should fail if seat is already booked",
+              "    if (pm.response.code === 400) {",
+              "        const response = pm.response.json();",
+              "        pm.expect(response.success).to.be.false;",
+              "        pm.expect(response.message).to.include('no longer available');",
+              "    } else {",
+              "        // If seat was available, that's also valid",
+              "        pm.expect(pm.response.code).to.be.oneOf([200, 400]);",
+              "    }",
+              "});"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

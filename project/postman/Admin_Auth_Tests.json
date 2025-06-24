@@ -1,0 +1,717 @@
+{
+    "info": {
+      "name": "Travel Booking API - Complete Admin Authentication Tests",
+      "description": "Complete test collection for admin authentication, registration, login, and all admin operations",
+      "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+    },
+    "variable": [
+      {
+        "key": "base_url",
+        "value": "http://localhost:3000",
+        "type": "string"
+      },
+      {
+        "key": "admin_key",
+        "value": "your_super_secret_admin_key_2024",
+        "type": "string"
+      },
+      {
+        "key": "jwt_token",
+        "value": "",
+        "type": "string"
+      },
+      {
+        "key": "admin_id",
+        "value": "",
+        "type": "string"
+      },
+      {
+        "key": "route_id",
+        "value": "",
+        "type": "string"
+      },
+      {
+        "key": "vehicle_id",
+        "value": "",
+        "type": "string"
+      }
+    ],
+    "item": [
+      {
+        "name": "🏥 Health Check",
+        "request": {
+          "method": "GET",
+          "header": [],
+          "url": {
+            "raw": "{{base_url}}/health",
+            "host": ["{{base_url}}"],
+            "path": ["health"]
+          }
+        },
+        "event": [
+          {
+            "listen": "test",
+            "script": {
+              "exec": [
+                "pm.test('Health check successful', function () {",
+                "    pm.response.to.have.status(200);",
+                "    const response = pm.response.json();",
+                "    pm.expect(response.success).to.be.true;",
+                "    pm.expect(response.message).to.include('Travel Booking System API is running');",
+                "});"
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "name": "👤 1. Admin Registration",
+        "request": {
+          "method": "POST",
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "body": {
+            "mode": "raw",
+            "raw": "{\n  \"username\": \"testadmin\",\n  \"email\": \"testadmin@example.com\",\n  \"password\": \"Admin123!\",\n  \"role\": \"admin\"\n}"
+          },
+          "url": {
+            "raw": "{{base_url}}/api/auth/register",
+            "host": ["{{base_url}}"],
+            "path": ["api", "auth", "register"]
+          }
+        },
+        "event": [
+          {
+            "listen": "test",
+            "script": {
+              "exec": [
+                "pm.test('Admin registration successful', function () {",
+                "    pm.response.to.have.status(201);",
+                "    const response = pm.response.json();",
+                "    pm.expect(response.success).to.be.true;",
+                "    pm.expect(response.message).to.include('Admin account created successfully');",
+                "    pm.expect(response.data.admin).to.exist;",
+                "    pm.expect(response.data.token).to.exist;",
+                "    ",
+                "    // Store admin details",
+                "    pm.collectionVariables.set('admin_id', response.data.admin.id);",
+                "    pm.collectionVariables.set('jwt_token', response.data.token);",
+                "});"
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "name": "🔐 2. Admin Login",
+        "request": {
+          "method": "POST",
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "body": {
+            "mode": "raw",
+            "raw": "{\n  \"username\": \"testadmin\",\n  \"password\": \"Admin123!\"\n}"
+          },
+          "url": {
+            "raw": "{{base_url}}/api/auth/login",
+            "host": ["{{base_url}}"],
+            "path": ["api", "auth", "login"]
+          }
+        },
+        "event": [
+          {
+            "listen": "test",
+            "script": {
+              "exec": [
+                "pm.test('Admin login successful', function () {",
+                "    pm.response.to.have.status(200);",
+                "    const response = pm.response.json();",
+                "    pm.expect(response.success).to.be.true;",
+                "    pm.expect(response.message).to.include('Login successful');",
+                "    pm.expect(response.data.admin).to.exist;",
+                "    pm.expect(response.data.token).to.exist;",
+                "    ",
+                "    // Update JWT token",
+                "    pm.collectionVariables.set('jwt_token', response.data.token);",
+                "});"
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "name": "👤 3. Get Admin Profile (JWT)",
+        "request": {
+          "method": "GET",
+          "header": [
+            {
+              "key": "Authorization",
+              "value": "Bearer {{jwt_token}}"
+            }
+          ],
+          "url": {
+            "raw": "{{base_url}}/api/auth/profile",
+            "host": ["{{base_url}}"],
+            "path": ["api", "auth", "profile"]
+          }
+        },
+        "event": [
+          {
+            "listen": "test",
+            "script": {
+              "exec": [
+                "pm.test('Profile retrieved successfully', function () {",
+                "    pm.response.to.have.status(200);",
+                "    const response = pm.response.json();",
+                "    pm.expect(response.success).to.be.true;",
+                "    pm.expect(response.data.username).to.equal('testadmin');",
+                "    pm.expect(response.data.email).to.equal('testadmin@example.com');",
+                "});"
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "name": "🔄 4. Refresh JWT Token",
+        "request": {
+          "method": "POST",
+          "header": [
+            {
+              "key": "Authorization",
+              "value": "Bearer {{jwt_token}}"
+            }
+          ],
+          "url": {
+            "raw": "{{base_url}}/api/auth/refresh-token",
+            "host": ["{{base_url}}"],
+            "path": ["api", "auth", "refresh-token"]
+          }
+        },
+        "event": [
+          {
+            "listen": "test",
+            "script": {
+              "exec": [
+                "pm.test('Token refreshed successfully', function () {",
+                "    pm.response.to.have.status(200);",
+                "    const response = pm.response.json();",
+                "    pm.expect(response.success).to.be.true;",
+                "    pm.expect(response.data.token).to.exist;",
+                "    ",
+                "    // Update JWT token",
+                "    pm.collectionVariables.set('jwt_token', response.data.token);",
+                "});"
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "name": "🛣️ 5. Create Route (JWT Auth)",
+        "request": {
+          "method": "POST",
+          "header": [
+            {
+              "key": "Authorization",
+              "value": "Bearer {{jwt_token}}"
+            },
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "body": {
+            "mode": "raw",
+            "raw": "{\n  \"from\": \"Colombo\",\n  \"to\": \"Kandy\",\n  \"description\": \"Scenic mountain route via Peradeniya - JWT Auth Test\"\n}"
+          },
+          "url": {
+            "raw": "{{base_url}}/api/admin/routes",
+            "host": ["{{base_url}}"],
+            "path": ["api", "admin", "routes"]
+          }
+        },
+        "event": [
+          {
+            "listen": "test",
+            "script": {
+              "exec": [
+                "pm.test('Route created with JWT auth', function () {",
+                "    pm.response.to.have.status(201);",
+                "    const response = pm.response.json();",
+                "    pm.expect(response.success).to.be.true;",
+                "    pm.expect(response.data.id).to.exist;",
+                "    pm.collectionVariables.set('route_id', response.data.id);",
+                "});"
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "name": "🚌 6. Create Vehicle (JWT Auth)",
+        "request": {
+          "method": "POST",
+          "header": [
+            {
+              "key": "Authorization",
+              "value": "Bearer {{jwt_token}}"
+            },
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "body": {
+            "mode": "raw",
+            "raw": "{\n  \"name\": \"Express Bus #1 - JWT Test\",\n  \"type\": \"bus\",\n  \"routeId\": \"{{route_id}}\",\n  \"bookingType\": \"common\",\n  \"seatCount\": 30,\n  \"pricePerSeat\": 1500.00,\n  \"imageUrl\": \"https://images.pexels.com/photos/1545743/pexels-photo-1545743.jpeg\"\n}"
+          },
+          "url": {
+            "raw": "{{base_url}}/api/admin/vehicles",
+            "host": ["{{base_url}}"],
+            "path": ["api", "admin", "vehicles"]
+          }
+        },
+        "event": [
+          {
+            "listen": "test",
+            "script": {
+              "exec": [
+                "pm.test('Vehicle created with JWT auth', function () {",
+                "    pm.response.to.have.status(201);",
+                "    const response = pm.response.json();",
+                "    pm.expect(response.success).to.be.true;",
+                "    pm.expect(response.data.id).to.exist;",
+                "    pm.collectionVariables.set('vehicle_id', response.data.id);",
+                "});"
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "name": "📊 7. Get Dashboard Stats (JWT Auth)",
+        "request": {
+          "method": "GET",
+          "header": [
+            {
+              "key": "Authorization",
+              "value": "Bearer {{jwt_token}}"
+            }
+          ],
+          "url": {
+            "raw": "{{base_url}}/api/admin/dashboard",
+            "host": ["{{base_url}}"],
+            "path": ["api", "admin", "dashboard"]
+          }
+        },
+        "event": [
+          {
+            "listen": "test",
+            "script": {
+              "exec": [
+                "pm.test('Dashboard stats retrieved with JWT', function () {",
+                "    pm.response.to.have.status(200);",
+                "    const response = pm.response.json();",
+                "    pm.expect(response.success).to.be.true;",
+                "    pm.expect(response.data.bookings).to.exist;",
+                "    pm.expect(response.data.payments).to.exist;",
+                "    pm.expect(response.data.vehicles).to.exist;",
+                "    pm.expect(response.data.routes).to.exist;",
+                "});"
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "name": "🔑 8. Test Legacy Admin Key Auth",
+        "request": {
+          "method": "GET",
+          "header": [
+            {
+              "key": "X-Admin-Key",
+              "value": "{{admin_key}}"
+            }
+          ],
+          "url": {
+            "raw": "{{base_url}}/api/admin/vehicles",
+            "host": ["{{base_url}}"],
+            "path": ["api", "admin", "vehicles"]
+          }
+        },
+        "event": [
+          {
+            "listen": "test",
+            "script": {
+              "exec": [
+                "pm.test('Legacy admin key auth works', function () {",
+                "    pm.response.to.have.status(200);",
+                "    const response = pm.response.json();",
+                "    pm.expect(response.success).to.be.true;",
+                "    pm.expect(response.data).to.be.an('array');",
+                "});"
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "name": "🔐 9. Change Password",
+        "request": {
+          "method": "POST",
+          "header": [
+            {
+              "key": "Authorization",
+              "value": "Bearer {{jwt_token}}"
+            },
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "body": {
+            "mode": "raw",
+            "raw": "{\n  \"currentPassword\": \"Admin123!\",\n  \"newPassword\": \"NewAdmin123!\"\n}"
+          },
+          "url": {
+            "raw": "{{base_url}}/api/auth/change-password",
+            "host": ["{{base_url}}"],
+            "path": ["api", "auth", "change-password"]
+          }
+        },
+        "event": [
+          {
+            "listen": "test",
+            "script": {
+              "exec": [
+                "pm.test('Password changed successfully', function () {",
+                "    pm.response.to.have.status(200);",
+                "    const response = pm.response.json();",
+                "    pm.expect(response.success).to.be.true;",
+                "    pm.expect(response.message).to.include('Password updated successfully');",
+                "});"
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "name": "🔐 10. Login with New Password",
+        "request": {
+          "method": "POST",
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "body": {
+            "mode": "raw",
+            "raw": "{\n  \"username\": \"testadmin\",\n  \"password\": \"NewAdmin123!\"\n}"
+          },
+          "url": {
+            "raw": "{{base_url}}/api/auth/login",
+            "host": ["{{base_url}}"],
+            "path": ["api", "auth", "login"]
+          }
+        },
+        "event": [
+          {
+            "listen": "test",
+            "script": {
+              "exec": [
+                "pm.test('Login with new password successful', function () {",
+                "    pm.response.to.have.status(200);",
+                "    const response = pm.response.json();",
+                "    pm.expect(response.success).to.be.true;",
+                "    pm.expect(response.data.token).to.exist;",
+                "    ",
+                "    // Update JWT token",
+                "    pm.collectionVariables.set('jwt_token', response.data.token);",
+                "});"
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "name": "👥 11. Get All Admins (Super Admin Only)",
+        "request": {
+          "method": "GET",
+          "header": [
+            {
+              "key": "Authorization",
+              "value": "Bearer {{jwt_token}}"
+            }
+          ],
+          "url": {
+            "raw": "{{base_url}}/api/auth/admins",
+            "host": ["{{base_url}}"],
+            "path": ["api", "auth", "admins"]
+          }
+        },
+        "event": [
+          {
+            "listen": "test",
+            "script": {
+              "exec": [
+                "pm.test('Get all admins response', function () {",
+                "    // This might fail if user is not super admin, which is expected",
+                "    if (pm.response.code === 200) {",
+                "        const response = pm.response.json();",
+                "        pm.expect(response.success).to.be.true;",
+                "        pm.expect(response.data).to.be.an('array');",
+                "    } else if (pm.response.code === 403) {",
+                "        const response = pm.response.json();",
+                "        pm.expect(response.message).to.include('Insufficient permissions');",
+                "    }",
+                "});"
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "name": "📋 12. Get All Bookings (Admin)",
+        "request": {
+          "method": "GET",
+          "header": [
+            {
+              "key": "Authorization",
+              "value": "Bearer {{jwt_token}}"
+            }
+          ],
+          "url": {
+            "raw": "{{base_url}}/api/admin/bookings",
+            "host": ["{{base_url}}"],
+            "path": ["api", "admin", "bookings"]
+          }
+        },
+        "event": [
+          {
+            "listen": "test",
+            "script": {
+              "exec": [
+                "pm.test('Bookings retrieved successfully', function () {",
+                "    pm.response.to.have.status(200);",
+                "    const response = pm.response.json();",
+                "    pm.expect(response.success).to.be.true;",
+                "    pm.expect(response.data).to.be.an('array');",
+                "});"
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "name": "🧹 13. System Maintenance",
+        "request": {
+          "method": "POST",
+          "header": [
+            {
+              "key": "Authorization",
+              "value": "Bearer {{jwt_token}}"
+            }
+          ],
+          "url": {
+            "raw": "{{base_url}}/api/admin/maintenance/unlock-expired-seats",
+            "host": ["{{base_url}}"],
+            "path": ["api", "admin", "maintenance", "unlock-expired-seats"]
+          }
+        },
+        "event": [
+          {
+            "listen": "test",
+            "script": {
+              "exec": [
+                "pm.test('System maintenance completed', function () {",
+                "    pm.response.to.have.status(200);",
+                "    const response = pm.response.json();",
+                "    pm.expect(response.success).to.be.true;",
+                "    pm.expect(response.data.unlockedCount).to.exist;",
+                "});"
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "name": "🚪 14. Admin Logout",
+        "request": {
+          "method": "POST",
+          "header": [
+            {
+              "key": "Authorization",
+              "value": "Bearer {{jwt_token}}"
+            }
+          ],
+          "url": {
+            "raw": "{{base_url}}/api/auth/logout",
+            "host": ["{{base_url}}"],
+            "path": ["api", "auth", "logout"]
+          }
+        },
+        "event": [
+          {
+            "listen": "test",
+            "script": {
+              "exec": [
+                "pm.test('Logout successful', function () {",
+                "    pm.response.to.have.status(200);",
+                "    const response = pm.response.json();",
+                "    pm.expect(response.success).to.be.true;",
+                "    pm.expect(response.message).to.include('Logged out successfully');",
+                "});"
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "name": "❌ 15. Test Invalid JWT Token",
+        "request": {
+          "method": "GET",
+          "header": [
+            {
+              "key": "Authorization",
+              "value": "Bearer invalid_token_here"
+            }
+          ],
+          "url": {
+            "raw": "{{base_url}}/api/auth/profile",
+            "host": ["{{base_url}}"],
+            "path": ["api", "auth", "profile"]
+          }
+        },
+        "event": [
+          {
+            "listen": "test",
+            "script": {
+              "exec": [
+                "pm.test('Invalid token rejected', function () {",
+                "    pm.response.to.have.status(401);",
+                "    const response = pm.response.json();",
+                "    pm.expect(response.success).to.be.false;",
+                "    pm.expect(response.message).to.include('Invalid or expired token');",
+                "});"
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "name": "❌ 16. Test Invalid Admin Key",
+        "request": {
+          "method": "GET",
+          "header": [
+            {
+              "key": "X-Admin-Key",
+              "value": "invalid_admin_key"
+            }
+          ],
+          "url": {
+            "raw": "{{base_url}}/api/admin/vehicles",
+            "host": ["{{base_url}}"],
+            "path": ["api", "admin", "vehicles"]
+          }
+        },
+        "event": [
+          {
+            "listen": "test",
+            "script": {
+              "exec": [
+                "pm.test('Invalid admin key rejected', function () {",
+                "    pm.response.to.have.status(403);",
+                "    const response = pm.response.json();",
+                "    pm.expect(response.success).to.be.false;",
+                "    pm.expect(response.message).to.include('Invalid admin credentials');",
+                "});"
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "name": "❌ 17. Test Registration Validation",
+        "request": {
+          "method": "POST",
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "body": {
+            "mode": "raw",
+            "raw": "{\n  \"username\": \"ab\",\n  \"email\": \"invalid-email\",\n  \"password\": \"weak\"\n}"
+          },
+          "url": {
+            "raw": "{{base_url}}/api/auth/register",
+            "host": ["{{base_url}}"],
+            "path": ["api", "auth", "register"]
+          }
+        },
+        "event": [
+          {
+            "listen": "test",
+            "script": {
+              "exec": [
+                "pm.test('Registration validation works', function () {",
+                "    pm.response.to.have.status(400);",
+                "    const response = pm.response.json();",
+                "    pm.expect(response.success).to.be.false;",
+                "    pm.expect(response.message).to.include('Validation failed');",
+                "    pm.expect(response.errors).to.be.an('array');",
+                "});"
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "name": "❌ 18. Test Duplicate Username",
+        "request": {
+          "method": "POST",
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "body": {
+            "mode": "raw",
+            "raw": "{\n  \"username\": \"testadmin\",\n  \"email\": \"different@example.com\",\n  \"password\": \"Admin123!\"\n}"
+          },
+          "url": {
+            "raw": "{{base_url}}/api/auth/register",
+            "host": ["{{base_url}}"],
+            "path": ["api", "auth", "register"]
+          }
+        },
+        "event": [
+          {
+            "listen": "test",
+            "script": {
+              "exec": [
+                "pm.test('Duplicate username rejected', function () {",
+                "    pm.response.to.have.status(409);",
+                "    const response = pm.response.json();",
+                "    pm.expect(response.success).to.be.false;",
+                "    pm.expect(response.message).to.include('Username already exists');",
+                "});"
+              ]
+            }
+          }
+        ]
+      }
+    ]
+  }
