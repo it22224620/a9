@@ -31,6 +31,7 @@ interface CustomerInfo {
   email: string;
   phone: string;
   message?: string;
+  travelDate: string; // ✅ Added travel date to interface
 }
 
 interface BookingContextType {
@@ -115,3 +116,4 @@ export function useBooking() {
   }
   return context;
 }
+</invoke>
