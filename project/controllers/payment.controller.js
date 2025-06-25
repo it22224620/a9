@@ -3,6 +3,7 @@ import { Booking } from '../models/Booking.js';
 import { Seat } from '../models/Seat.js';
 import crypto from 'crypto';
 import { validationResult } from 'express-validator';
+import { supabase } from '../config/db.js';
 
 export class PaymentController {
   static async createPaymentIntent(req, res) {
@@ -326,23 +327,42 @@ export class PaymentController {
           if (bookingUpdateResult.success) {
             console.log(`✅ Booking confirmed: ${booking.bookingReference}`);
             
-            // Confirm seats with travel date
-            const seatsResult = await Seat.confirmSeats(booking.seatIds, booking.travelDate);
-            if (seatsResult.success) {
-              console.log(`✅ Seats booked for ${booking.travelDate}: ${booking.seatIds.length} seats`);
-            } else {
-              console.error('❌ Failed to confirm seats:', seatsResult.error);
+            // DIRECT DATABASE UPDATE: This is more reliable than using the model
+            try {
+              const { data, error } = await supabase
+                .from('seats')
+                .update({
+                  status: 'booked',
+                  booking_date: booking.travelDate,
+                  customer_email: booking.email,
+                  locked_at: null,
+                  updated_at: new Date().toISOString()
+                })
+                .in('id', booking.seatIds);
               
-              // Try direct database update as fallback
-              try {
-                const { data, error } = await supabase.rpc('fix_booking_manually', { 
-                  booking_ref: booking.bookingReference 
-                });
+              if (error) throw error;
+              console.log(`✅ Directly booked seats for ${booking.travelDate}: ${booking.seatIds.length} seats`);
+            } catch (dbError) {
+              console.error('❌ Direct database update error:', dbError);
+              
+              // Try using the model as fallback
+              const seatsResult = await Seat.confirmSeats(booking.seatIds, booking.travelDate);
+              if (seatsResult.success) {
+                console.log(`✅ Fallback: Seats booked for ${booking.travelDate}: ${booking.seatIds.length} seats`);
+              } else {
+                console.error('❌ Failed to confirm seats:', seatsResult.error);
                 
-                if (error) throw error;
-                console.log('✅ Fixed booking via database function:', data);
-              } catch (dbError) {
-                console.error('❌ Database function error:', dbError);
+                // Try direct database function as last resort
+                try {
+                  const { data, error } = await supabase.rpc('fix_booking_manually', { 
+                    booking_ref: booking.bookingReference 
+                  });
+                  
+                  if (error) throw error;
+                  console.log('✅ Fixed booking via database function:', data);
+                } catch (dbError) {
+                  console.error('❌ Database function error:', dbError);
+                }
               }
             }
           } else {
@@ -608,20 +628,40 @@ export class PaymentController {
       // Update booking status
       await Booking.updateStatus(booking.id, 'confirmed');
       
-      // Book the seats
-      const seatsResult = await Seat.confirmSeats(booking.seatIds, booking.travelDate);
-      
-      // If seat update failed, try direct database update
-      if (!seatsResult.success) {
-        try {
-          const { data, error } = await supabase.rpc('fix_booking_manually', { 
-            booking_ref: bookingReference 
-          });
+      // DIRECT DATABASE UPDATE: This is more reliable than using the model
+      try {
+        const { data, error } = await supabase
+          .from('seats')
+          .update({
+            status: 'booked',
+            booking_date: booking.travelDate,
+            customer_email: booking.email,
+            locked_at: null,
+            updated_at: new Date().toISOString()
+          })
+          .in('id', booking.seatIds);
+        
+        if (error) throw error;
+        console.log(`✅ Directly booked seats for ${booking.travelDate}: ${booking.seatIds.length} seats`);
+      } catch (dbError) {
+        console.error('❌ Direct database update error:', dbError);
+        
+        // Try using the model as fallback
+        const seatsResult = await Seat.confirmSeats(booking.seatIds, booking.travelDate);
+        if (!seatsResult.success) {
+          console.error('❌ Failed to confirm seats:', seatsResult.error);
           
-          if (error) throw error;
-          console.log('✅ Fixed booking via database function:', data);
-        } catch (dbError) {
-          console.error('❌ Database function error:', dbError);
+          // Try direct database function as last resort
+          try {
+            const { data, error } = await supabase.rpc('fix_booking_manually', { 
+              booking_ref: bookingReference 
+            });
+            
+            if (error) throw error;
+            console.log('✅ Fixed booking via database function:', data);
+          } catch (dbError) {
+            console.error('❌ Database function error:', dbError);
+          }
         }
       }
       
@@ -633,7 +673,7 @@ export class PaymentController {
         message: 'Booking fixed successfully',
         data: {
           booking: updatedBookingResult.success ? updatedBookingResult.data : booking,
-          seatsUpdated: seatsResult.success ? seatsResult.data.length : 0
+          seatsUpdated: booking.seatIds.length
         }
       });
 

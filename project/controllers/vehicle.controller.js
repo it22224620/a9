@@ -242,19 +242,13 @@ export class VehicleController {
 
   static async unlockExpiredSeats(req, res) {
     try {
-      const { data, error } = await supabase.rpc('cleanup_expired_seat_locks');
-      
-      if (error) throw error;
-      
-      const unlockedCount = data && data.length > 0 ? data[0].unlocked_count : 0;
-      
-      console.log(`🔓 Unlocked ${unlockedCount} expired seats`);
+      const result = await Seat.unlockExpiredSeats();
       
       res.json({
         success: true,
-        message: `Unlocked ${unlockedCount} expired seats`,
+        message: `Unlocked ${result.count || 0} expired seats`,
         data: {
-          unlockedCount
+          unlockedCount: result.count || 0
         }
       });
 

@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { CheckCircle, Download, Calendar, MapPin, Users, CreditCard, FileText, Printer, ArrowLeft } from 'lucide-react';
+import { CheckCircle, Download, Calendar, MapPin, Users, CreditCard, FileText, Printer, ArrowLeft, RefreshCw } from 'lucide-react';
 import Link from 'next/link';
 import Navbar from '../../../components/layout/Navbar';
 import Footer from '../../../components/layout/Footer';
@@ -37,6 +37,7 @@ export default function BookingSuccessPage() {
   const [booking, setBooking] = useState<BookingDetails | null>(null);
   const [loading, setLoading] = useState(true);
   const [retryCount, setRetryCount] = useState(0);
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     if (bookingRef) {
@@ -46,6 +47,7 @@ export default function BookingSuccessPage() {
 
   const fetchBookingDetails = async () => {
     try {
+      setRefreshing(true);
       const response = await getBookingStatus(bookingRef!, 'reference');
       if (response.success) {
         setBooking(response.data.booking);
@@ -64,7 +66,12 @@ export default function BookingSuccessPage() {
       toast.error('Failed to fetch booking details');
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
+  };
+
+  const handleRefresh = () => {
+    setRetryCount(prev => prev + 1);
   };
 
   const downloadTicket = () => {
@@ -88,7 +95,7 @@ Seats: ${booking.seatIds.length}
 Amount: LKR ${booking.totalAmount?.toFixed(2)}
 
 Status: ${booking.status}
-Booked on: ${new Date(booking.createdAt || '').toLocaleDateString()}
+Booked on: ${new Date(booking.createdAt).toLocaleDateString()}
 
 Thank you for choosing Nature Travel!
     `;
@@ -173,9 +180,17 @@ Thank you for choosing Nature Travel!
             
             {booking.status === 'pending' && (
               <div className="mt-4 p-4 bg-yellow-50 rounded-lg inline-block">
-                <p className="text-yellow-700">
+                <p className="text-yellow-700 flex items-center">
+                  <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
                   <strong>Note:</strong> Your payment is being processed. This page will automatically refresh to show the latest status.
                 </p>
+                <button 
+                  onClick={handleRefresh}
+                  disabled={refreshing}
+                  className="mt-2 px-4 py-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 transition-colors disabled:opacity-50"
+                >
+                  {refreshing ? 'Refreshing...' : 'Refresh Status'}
+                </button>
               </div>
             )}
           </div>

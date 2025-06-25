@@ -8,7 +8,7 @@ export class Seat {
     this.status = data.status; // 'available', 'pending', 'booked'
     this.lockedAt = data.locked_at;
     this.customerEmail = data.customer_email;
-    this.bookingDate = data.booking_date; // NEW: Booking date
+    this.bookingDate = data.booking_date; // Booking date
     this.createdAt = data.created_at;
   }
 
@@ -33,7 +33,7 @@ export class Seat {
     }
   }
 
-  // NEW: Find seats by vehicle and date using the database function
+  // Find seats by vehicle and date using the database function
   static async findByVehicleAndDate(vehicleId, travelDate) {
     try {
       const { data, error } = await supabase
@@ -47,7 +47,7 @@ export class Seat {
         id: seat.seat_id,
         vehicleId: vehicleId,
         seatNumber: seat.seat_number,
-        status: seat.status,
+        status: seat.is_available_for_date ? 'available' : seat.status,
         isAvailableForDate: seat.is_available_for_date,
         bookingDate: seat.booking_date,
         customerEmail: seat.customer_email
@@ -112,10 +112,15 @@ export class Seat {
     }
   }
 
-  // UPDATED: Properly book seats when payment is successful
+  // Properly book seats when payment is successful
   static async confirmSeats(seatIds, travelDate = null) {
     try {
-      const updateData = { status: 'booked' };
+      console.log(`🔄 Confirming ${seatIds.length} seats for travel date: ${travelDate}`);
+      
+      const updateData = { 
+        status: 'booked',
+        locked_at: null
+      };
       
       // Set the booking date when confirming
       if (travelDate) {
@@ -126,14 +131,17 @@ export class Seat {
         .from('seats')
         .update(updateData)
         .in('id', seatIds)
-        .eq('status', 'pending')
         .select();
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ Error confirming seats:', error);
+        throw error;
+      }
       
       console.log(`✅ Successfully booked ${data.length} seats for travel date: ${travelDate}`);
       return { success: true, data: data.map(seat => new Seat(seat)) };
     } catch (error) {
+      console.error('❌ Seat confirmation error:', error);
       return { success: false, error: error.message };
     }
   }
@@ -187,7 +195,7 @@ export class Seat {
     }
   }
 
-  // NEW: Admin operations for full CRUD access
+  // Admin operations for full CRUD access
   static async adminUpdate(id, updateData, adminId) {
     try {
       const { data, error } = await supabase
