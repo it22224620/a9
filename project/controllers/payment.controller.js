@@ -61,7 +61,7 @@ export class PaymentController {
       
       // Generate hash according to official PayHere documentation
       const hash = PaymentController.generatePayHereHash(merchantId, orderId, formattedAmount, currency, merchantSecret);
-
+a
       // Create payment record
       const paymentResult = await Payment.create({
         bookingId: booking.id,
