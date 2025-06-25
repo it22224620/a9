@@ -38,6 +38,9 @@ export class Booking {
     try {
       const bookingReference = this.generateBookingReference();
       
+      // Ensure travel date is provided
+      const travelDate = bookingData.travelDate || new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+      
       const { data, error } = await supabase
         .from('bookings')
         .insert([{
@@ -51,7 +54,7 @@ export class Booking {
           seat_ids: bookingData.seatIds,
           booking_type: bookingData.bookingType,
           total_amount: bookingData.totalAmount,
-          travel_date: bookingData.travelDate, // Include travel date
+          travel_date: travelDate,
           status: 'pending'
         }])
         .select()
@@ -134,7 +137,7 @@ export class Booking {
     try {
       const { data, error } = await supabase
         .from('bookings')
-        .update({ status })
+        .update({ status, updated_at: new Date().toISOString() })
         .eq('id', id)
         .select()
         .single();

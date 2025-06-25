@@ -12,7 +12,7 @@ interface CustomerFormData {
   email: string;
   phone: string;
   message?: string;
-  travelDate: string; // Travel date
+  travelDate: string;
 }
 
 export default function CustomerForm() {
@@ -57,8 +57,8 @@ export default function CustomerForm() {
             animate={{ opacity: 1, y: 0 }}
             className="bg-white rounded-2xl p-8 shadow-lg"
           >
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-              {/* Travel Date - REQUIRED */}
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-6" id="customer-form">
+              {/* Travel Date */}
               <div className="form-group">
                 <label className="form-label flex items-center space-x-2">
                   <Calendar className="w-4 h-4 text-gray-500" />
@@ -251,7 +251,6 @@ export default function CustomerForm() {
         <button
           type="submit"
           form="customer-form"
-          onClick={handleSubmit(onSubmit)}
           className="px-8 py-3 bg-primary-600 hover:bg-primary-700 text-white rounded-xl font-semibold transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105"
         >
           Continue to Seat Selection

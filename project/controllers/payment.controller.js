@@ -3,7 +3,6 @@ import { Booking } from '../models/Booking.js';
 import { Seat } from '../models/Seat.js';
 import crypto from 'crypto';
 import { validationResult } from 'express-validator';
-import { supabase } from '../config/db.js';
 
 export class PaymentController {
   static async createPaymentIntent(req, res) {
@@ -147,7 +146,7 @@ export class PaymentController {
             amount: booking.totalAmount,
             customerName: booking.customerName,
             email: booking.email,
-            travelDate: booking.travelDate // Include travel date
+            travelDate: booking.travelDate
           }
         }
       });
@@ -215,7 +214,7 @@ export class PaymentController {
       }
 
       // Prevent duplicate processing
-      if (payment.status === 'success' && status_code === '2') {
+      if (payment.status === 'success') {
         console.log('✅ Payment already processed successfully:', order_id);
         return res.status(200).json({
           success: true,
@@ -223,55 +222,12 @@ export class PaymentController {
         });
       }
 
-      // Verify webhook signature according to official documentation
-      const isValidSignature = PaymentController.verifyPayHereSignature({
-        merchant_id,
-        order_id,
-        payhere_amount,
-        payhere_currency,
-        status_code,
-        md5sig
-      });
-
-      // For development, we'll accept invalid signatures but log them
-      if (!isValidSignature) {
-        console.warn('⚠️ Invalid webhook signature, but continuing for development');
-      }
-
-      // Validate payment amount if provided
-      if (payhere_amount) {
-        const expectedAmount = parseFloat(payment.amount).toFixed(2);
-        const receivedAmount = parseFloat(payhere_amount).toFixed(2);
-        
-        if (expectedAmount !== receivedAmount) {
-          console.error('❌ Payment amount mismatch:', {
-            expected: expectedAmount,
-            received: receivedAmount,
-            orderId: order_id
-          });
-          
-          await Payment.updateStatus(
-            payment.id,
-            'failed',
-            payment_id,
-            { ...req.body, error: 'Amount mismatch', timestamp: new Date().toISOString() }
-          );
-          
-          return res.status(400).json({
-            success: false,
-            message: 'Payment amount mismatch'
-          });
-        }
-      }
-
       // Determine payment status based on PayHere status code
       let paymentStatus;
-      let shouldConfirmBooking = false;
       
       switch (status_code) {
         case '2': // Success
           paymentStatus = 'success';
-          shouldConfirmBooking = true;
           break;
         case '0': // Pending
           paymentStatus = 'pending';
@@ -286,7 +242,7 @@ export class PaymentController {
           console.warn('⚠️ Unknown PayHere status code:', status_code);
       }
 
-      // Update payment record
+      // Update payment record - this will trigger the database function
       const updateResult = await Payment.updateStatus(
         payment.id,
         paymentStatus,
@@ -307,83 +263,7 @@ export class PaymentController {
         });
       }
 
-      // Get booking details
-      const bookingResult = await Booking.findById(payment.bookingId);
-      if (!bookingResult.success) {
-        console.error('❌ Booking not found for payment:', payment.bookingId);
-        return res.status(404).json({
-          success: false,
-          message: 'Booking not found'
-        });
-      }
-
-      const booking = bookingResult.data;
-
-      // Manually handle booking confirmation and seat booking
-      if (shouldConfirmBooking) {
-        try {
-          // Update booking status
-          const bookingUpdateResult = await Booking.updateStatus(payment.bookingId, 'confirmed');
-          if (bookingUpdateResult.success) {
-            console.log(`✅ Booking confirmed: ${booking.bookingReference}`);
-            
-            // DIRECT DATABASE UPDATE: This is more reliable than using the model
-            try {
-              const { data, error } = await supabase
-                .from('seats')
-                .update({
-                  status: 'booked',
-                  booking_date: booking.travelDate,
-                  customer_email: booking.email,
-                  locked_at: null,
-                  updated_at: new Date().toISOString()
-                })
-                .in('id', booking.seatIds);
-              
-              if (error) throw error;
-              console.log(`✅ Directly booked seats for ${booking.travelDate}: ${booking.seatIds.length} seats`);
-            } catch (dbError) {
-              console.error('❌ Direct database update error:', dbError);
-              
-              // Try using the model as fallback
-              const seatsResult = await Seat.confirmSeats(booking.seatIds, booking.travelDate);
-              if (seatsResult.success) {
-                console.log(`✅ Fallback: Seats booked for ${booking.travelDate}: ${booking.seatIds.length} seats`);
-              } else {
-                console.error('❌ Failed to confirm seats:', seatsResult.error);
-                
-                // Try direct database function as last resort
-                try {
-                  const { data, error } = await supabase.rpc('fix_booking_manually', { 
-                    booking_ref: booking.bookingReference 
-                  });
-                  
-                  if (error) throw error;
-                  console.log('✅ Fixed booking via database function:', data);
-                } catch (dbError) {
-                  console.error('❌ Database function error:', dbError);
-                }
-              }
-            }
-          } else {
-            console.error('❌ Failed to confirm booking:', bookingUpdateResult.error);
-          }
-        } catch (bookingError) {
-          console.error('❌ Error confirming booking:', bookingError);
-        }
-      } else if (paymentStatus === 'failed') {
-        try {
-          // Update booking status to cancelled
-          await Booking.updateStatus(payment.bookingId, 'cancelled');
-          
-          // Unlock seats
-          await Seat.unlockSeats(booking.seatIds);
-          
-          console.log(`❌ Payment failed, booking cancelled, seats unlocked: ${booking.bookingReference}`);
-        } catch (bookingError) {
-          console.error('❌ Error cancelling booking:', bookingError);
-        }
-      }
+      console.log(`✅ Payment webhook processed: ${order_id} - Status: ${paymentStatus}`);
 
       res.status(200).json({
         success: true,
@@ -567,122 +447,40 @@ export class PaymentController {
     }
   }
 
-  // Manual fix for a specific booking
-  static async fixBookingStatus(req, res) {
+  // Test webhook endpoint for development
+  static async testWebhook(req, res) {
     try {
-      const { bookingReference } = req.params;
-      
-      if (!bookingReference) {
+      const { orderId, statusCode = '2' } = req.body;
+
+      if (!orderId) {
         return res.status(400).json({
           success: false,
-          message: 'Booking reference is required'
+          message: 'Order ID is required'
         });
       }
 
-      console.log(`🔧 Manually fixing booking: ${bookingReference}`);
+      // Simulate webhook data
+      const webhookData = {
+        merchant_id: '1230783',
+        order_id: orderId,
+        payment_id: `TEST_${Date.now()}`,
+        payhere_amount: '1500.00',
+        payhere_currency: 'LKR',
+        status_code: statusCode,
+        md5sig: 'test_signature',
+        custom_1: 'test_booking_ref',
+        custom_2: 'test_booking_id'
+      };
 
-      // Get booking details
-      const bookingResult = await Booking.findByReference(bookingReference);
-      if (!bookingResult.success) {
-        return res.status(404).json({
-          success: false,
-          message: 'Booking not found'
-        });
-      }
-
-      const booking = bookingResult.data;
-      
-      // Get payment details
-      const paymentsResult = await Payment.findByBookingId(booking.id);
-      if (!paymentsResult.success || paymentsResult.data.length === 0) {
-        // If no payment exists, create a successful payment
-        const paymentResult = await Payment.create({
-          bookingId: booking.id,
-          amount: booking.totalAmount,
-          currency: 'LKR',
-          gateway: 'payhere',
-          status: 'success',
-          gatewayResponse: {
-            manualFix: true,
-            fixedAt: new Date().toISOString()
-          }
-        });
-        
-        if (!paymentResult.success) {
-          return res.status(500).json({
-            success: false,
-            message: 'Failed to create payment record'
-          });
-        }
-      } else {
-        // Update existing payment to success
-        const payment = paymentsResult.data[0];
-        if (payment.status !== 'success') {
-          await Payment.updateStatus(payment.id, 'success', null, {
-            manualFix: true,
-            fixedAt: new Date().toISOString()
-          });
-        }
-      }
-      
-      // Update booking status
-      await Booking.updateStatus(booking.id, 'confirmed');
-      
-      // DIRECT DATABASE UPDATE: This is more reliable than using the model
-      try {
-        const { data, error } = await supabase
-          .from('seats')
-          .update({
-            status: 'booked',
-            booking_date: booking.travelDate,
-            customer_email: booking.email,
-            locked_at: null,
-            updated_at: new Date().toISOString()
-          })
-          .in('id', booking.seatIds);
-        
-        if (error) throw error;
-        console.log(`✅ Directly booked seats for ${booking.travelDate}: ${booking.seatIds.length} seats`);
-      } catch (dbError) {
-        console.error('❌ Direct database update error:', dbError);
-        
-        // Try using the model as fallback
-        const seatsResult = await Seat.confirmSeats(booking.seatIds, booking.travelDate);
-        if (!seatsResult.success) {
-          console.error('❌ Failed to confirm seats:', seatsResult.error);
-          
-          // Try direct database function as last resort
-          try {
-            const { data, error } = await supabase.rpc('fix_booking_manually', { 
-              booking_ref: bookingReference 
-            });
-            
-            if (error) throw error;
-            console.log('✅ Fixed booking via database function:', data);
-          } catch (dbError) {
-            console.error('❌ Database function error:', dbError);
-          }
-        }
-      }
-      
-      // Get updated booking
-      const updatedBookingResult = await Booking.findByReference(bookingReference);
-      
-      return res.json({
-        success: true,
-        message: 'Booking fixed successfully',
-        data: {
-          booking: updatedBookingResult.success ? updatedBookingResult.data : booking,
-          seatsUpdated: booking.seatIds.length
-        }
-      });
+      // Process the test webhook
+      req.body = webhookData;
+      return await PaymentController.handleWebhook(req, res);
 
     } catch (error) {
-      console.error('Fix booking status error:', error);
+      console.error('Test webhook error:', error);
       res.status(500).json({
         success: false,
-        message: 'Failed to fix booking status',
-        error: process.env.NODE_ENV === 'development' ? error.message : undefined
+        message: 'Test webhook failed'
       });
     }
   }

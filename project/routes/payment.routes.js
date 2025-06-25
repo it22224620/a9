@@ -17,7 +17,9 @@ router.post('/webhook', PaymentController.handleWebhook);
 router.get('/status/:paymentId', PaymentController.getPaymentStatus);
 router.post('/retry/:paymentId', PaymentController.retryPayment);
 
-// New route for manually fixing booking status
-router.post('/fix-booking/:bookingReference', PaymentController.fixBookingStatus);
+// Test webhook endpoint for development
+if (process.env.NODE_ENV === 'development') {
+  router.post('/test-webhook', PaymentController.testWebhook);
+}
 
 export default router;

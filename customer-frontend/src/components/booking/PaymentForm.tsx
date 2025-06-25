@@ -20,7 +20,6 @@ export default function PaymentForm() {
   const [loading, setLoading] = useState(false);
   const [bookingId, setBookingId] = useState<string>('');
   const [paymentConfig, setPaymentConfig] = useState<any>(null);
-  const [bookingReference, setBookingReference] = useState<string>('');
 
   const totalPrice = (selectedSeats?.length || 0) * (selectedVehicle?.pricePerSeat || 0);
 
@@ -66,7 +65,6 @@ export default function PaymentForm() {
 
       const booking = bookingResponse.data.booking;
       setBookingId(booking.id);
-      setBookingReference(booking.bookingReference);
 
       // Step 2: Create payment intent
       const paymentResponse = await createPaymentIntent({
@@ -169,6 +167,39 @@ export default function PaymentForm() {
     }
   };
 
+  // Test payment function for development
+  const handleTestPayment = async () => {
+    if (!bookingId) {
+      toast.error('Please create booking first');
+      return;
+    }
+
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/payment/test-webhook`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          orderId: paymentConfig?.order_id,
+          statusCode: '2' // Success
+        })
+      });
+
+      if (response.ok) {
+        toast.success('Test payment successful! Redirecting...');
+        setTimeout(() => {
+          window.location.href = `/booking/success?booking=${paymentConfig?.custom_1}`;
+        }, 2000);
+      } else {
+        toast.error('Test payment failed');
+      }
+    } catch (error) {
+      console.error('Test payment error:', error);
+      toast.error('Test payment failed');
+    }
+  };
+
   return (
     <div className="space-y-8">
       <div className="flex items-center justify-between">
@@ -177,7 +208,7 @@ export default function PaymentForm() {
           className="flex items-center space-x-2 text-gray-600 hover:text-gray-900 transition-colors"
         >
           <ArrowLeft className="w-5 h-5" />
-          <span>Back to Details</span>
+          <span>Back to Seats</span>
         </button>
         <div className="text-center">
           <h2 className="text-3xl font-bold text-gray-900 mb-2">Secure Payment</h2>
@@ -259,28 +290,41 @@ export default function PaymentForm() {
               </div>
             </div>
 
-            {/* Payment Button */}
-            <button
-              onClick={handlePayment}
-              disabled={loading}
-              className={`w-full py-4 rounded-xl font-semibold text-lg transition-all duration-300 ${
-                loading
-                  ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                  : 'bg-gradient-to-r from-primary-600 to-purple-600 hover:from-primary-700 hover:to-purple-700 text-white shadow-lg hover:shadow-xl transform hover:scale-105'
-              }`}
-            >
-              {loading ? (
-                <div className="flex items-center justify-center space-x-2">
-                  <div className="spinner"></div>
-                  <span>Processing...</span>
-                </div>
-              ) : (
-                <div className="flex items-center justify-center space-x-2">
-                  <CreditCard className="w-6 h-6" />
-                  <span>Pay LKR {totalPrice.toFixed(2)} Securely</span>
-                </div>
+            {/* Payment Buttons */}
+            <div className="space-y-4">
+              {/* Main Payment Button */}
+              <button
+                onClick={handlePayment}
+                disabled={loading}
+                className={`w-full py-4 rounded-xl font-semibold text-lg transition-all duration-300 ${
+                  loading
+                    ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                    : 'bg-gradient-to-r from-primary-600 to-purple-600 hover:from-primary-700 hover:to-purple-700 text-white shadow-lg hover:shadow-xl transform hover:scale-105'
+                }`}
+              >
+                {loading ? (
+                  <div className="flex items-center justify-center space-x-2">
+                    <div className="spinner"></div>
+                    <span>Processing...</span>
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-center space-x-2">
+                    <CreditCard className="w-6 h-6" />
+                    <span>Pay LKR {totalPrice.toFixed(2)} Securely</span>
+                  </div>
+                )}
+              </button>
+
+              {/* Test Payment Button (Development Only) */}
+              {process.env.NODE_ENV === 'development' && bookingId && paymentConfig && (
+                <button
+                  onClick={handleTestPayment}
+                  className="w-full py-3 border-2 border-green-500 text-green-600 rounded-xl font-semibold hover:bg-green-50 transition-colors"
+                >
+                  🧪 Test Payment Success (Dev Only)
+                </button>
               )}
-            </button>
+            </div>
 
             <p className="text-xs text-gray-500 text-center mt-4">
               By proceeding, you agree to our Terms of Service and Privacy Policy.
@@ -314,9 +358,7 @@ export default function PaymentForm() {
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-600">Travel Date:</span>
-                <span className="font-medium">
-                  {customerInfo?.travelDate ? new Date(customerInfo.travelDate).toLocaleDateString() : 'Not specified'}
-                </span>
+                <span className="font-medium">{customerInfo?.travelDate}</span>
               </div>
             </div>
 
