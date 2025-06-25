@@ -87,6 +87,7 @@ export default function SeatSelection() {
     try {
       console.log(`🔒 Locking ${selectedSeatIds.length} seats for ${customerInfo.email} on ${customerInfo.travelDate}`);
       
+      // ✅ FIXED: Call lockSeats with the correct number of arguments
       const response = await lockSeats(selectedSeatIds, customerInfo.email, customerInfo.travelDate);
       if (response.success) {
         setSelectedSeats(selectedSeatIds);
