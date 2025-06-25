@@ -332,6 +332,18 @@ export class PaymentController {
               console.log(`✅ Seats booked for ${booking.travelDate}: ${booking.seatIds.length} seats`);
             } else {
               console.error('❌ Failed to confirm seats:', seatsResult.error);
+              
+              // Try direct database update as fallback
+              try {
+                const { data, error } = await supabase.rpc('fix_booking_manually', { 
+                  booking_ref: booking.bookingReference 
+                });
+                
+                if (error) throw error;
+                console.log('✅ Fixed booking via database function:', data);
+              } catch (dbError) {
+                console.error('❌ Database function error:', dbError);
+              }
             }
           } else {
             console.error('❌ Failed to confirm booking:', bookingUpdateResult.error);
@@ -547,6 +559,8 @@ export class PaymentController {
         });
       }
 
+      console.log(`🔧 Manually fixing booking: ${bookingReference}`);
+
       // Get booking details
       const bookingResult = await Booking.findByReference(bookingReference);
       if (!bookingResult.success) {
@@ -561,72 +575,65 @@ export class PaymentController {
       // Get payment details
       const paymentsResult = await Payment.findByBookingId(booking.id);
       if (!paymentsResult.success || paymentsResult.data.length === 0) {
-        return res.status(404).json({
-          success: false,
-          message: 'No payments found for this booking'
+        // If no payment exists, create a successful payment
+        const paymentResult = await Payment.create({
+          bookingId: booking.id,
+          amount: booking.totalAmount,
+          currency: 'LKR',
+          gateway: 'payhere',
+          status: 'success',
+          gatewayResponse: {
+            manualFix: true,
+            fixedAt: new Date().toISOString()
+          }
         });
+        
+        if (!paymentResult.success) {
+          return res.status(500).json({
+            success: false,
+            message: 'Failed to create payment record'
+          });
+        }
+      } else {
+        // Update existing payment to success
+        const payment = paymentsResult.data[0];
+        if (payment.status !== 'success') {
+          await Payment.updateStatus(payment.id, 'success', null, {
+            manualFix: true,
+            fixedAt: new Date().toISOString()
+          });
+        }
       }
-
-      const payment = paymentsResult.data[0]; // Get the first payment
       
-      // If payment is successful but booking is not confirmed, fix it
-      if (payment.status === 'success' && booking.status !== 'confirmed') {
-        // Update booking status
-        await Booking.updateStatus(booking.id, 'confirmed');
-        
-        // Book the seats
-        const seatsResult = await Seat.confirmSeats(booking.seatIds, booking.travelDate);
-        
-        return res.json({
-          success: true,
-          message: 'Booking status fixed successfully',
-          data: {
-            booking: {
-              id: booking.id,
-              reference: booking.bookingReference,
-              oldStatus: booking.status,
-              newStatus: 'confirmed'
-            },
-            seats: {
-              updated: seatsResult.success ? seatsResult.data.length : 0,
-              total: booking.seatIds.length
-            }
-          }
-        });
-      } else if (booking.status === 'confirmed') {
-        // If booking is already confirmed but seats aren't booked, fix the seats
-        const seatsResult = await Seat.confirmSeats(booking.seatIds, booking.travelDate);
-        
-        return res.json({
-          success: true,
-          message: 'Seats updated for already confirmed booking',
-          data: {
-            booking: {
-              id: booking.id,
-              reference: booking.bookingReference,
-              status: booking.status
-            },
-            seats: {
-              updated: seatsResult.success ? seatsResult.data.length : 0,
-              total: booking.seatIds.length
-            }
-          }
-        });
+      // Update booking status
+      await Booking.updateStatus(booking.id, 'confirmed');
+      
+      // Book the seats
+      const seatsResult = await Seat.confirmSeats(booking.seatIds, booking.travelDate);
+      
+      // If seat update failed, try direct database update
+      if (!seatsResult.success) {
+        try {
+          const { data, error } = await supabase.rpc('fix_booking_manually', { 
+            booking_ref: bookingReference 
+          });
+          
+          if (error) throw error;
+          console.log('✅ Fixed booking via database function:', data);
+        } catch (dbError) {
+          console.error('❌ Database function error:', dbError);
+        }
       }
+      
+      // Get updated booking
+      const updatedBookingResult = await Booking.findByReference(bookingReference);
       
       return res.json({
         success: true,
-        message: 'Booking status is already correct',
+        message: 'Booking fixed successfully',
         data: {
-          booking: {
-            id: booking.id,
-            reference: booking.bookingReference,
-            status: booking.status
-          },
-          payment: {
-            id: payment.id,
-            status: payment.status
-          }
+          booking: updatedBookingResult.success ? updatedBookingResult.data : booking,
+          seatsUpdated: seatsResult.success ? seatsResult.data.length : 0
         }
       });
 

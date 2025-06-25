@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { CheckCircle, Download, Calendar, MapPin, Users, CreditCard, FileText, Printer } from 'lucide-react';
+import { CheckCircle, Download, Calendar, MapPin, Users, CreditCard, FileText, Printer, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import Navbar from '../../../components/layout/Navbar';
 import Footer from '../../../components/layout/Footer';
@@ -131,6 +131,7 @@ Thank you for choosing Nature Travel!
               href="/"
               className="inline-flex items-center px-6 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
             >
+              <ArrowLeft className="w-4 h-4 mr-2" />
               Back to Home
             </Link>
           </div>
@@ -299,8 +300,8 @@ Thank you for choosing Nature Travel!
                           ? 'bg-yellow-100 text-yellow-800'
                           : 'bg-red-100 text-red-800'
                     }`}>
-                      {booking.status}
-                    </span>
+                       {booking.status}
+                     </span>
                   </div>
                 </div>
               </div>
