@@ -20,6 +20,7 @@ export default function PaymentForm() {
   const [loading, setLoading] = useState(false);
   const [bookingId, setBookingId] = useState<string>('');
   const [paymentConfig, setPaymentConfig] = useState<any>(null);
+  const [bookingReference, setBookingReference] = useState<string>('');
 
   const totalPrice = (selectedSeats?.length || 0) * (selectedVehicle?.pricePerSeat || 0);
 
@@ -41,7 +42,8 @@ export default function PaymentForm() {
         routeId: selectedRoute.id,
         vehicleId: selectedVehicle.id,
         seatIds: selectedSeats,
-        bookingType: selectedVehicle.bookingType
+        bookingType: selectedVehicle.bookingType,
+        travelDate: customerInfo.travelDate
       });
 
       const bookingResponse = await createBooking({
@@ -52,7 +54,8 @@ export default function PaymentForm() {
         routeId: selectedRoute.id,
         vehicleId: selectedVehicle.id,
         seatIds: selectedSeats,
-        bookingType: selectedVehicle.bookingType
+        bookingType: selectedVehicle.bookingType,
+        travelDate: customerInfo.travelDate
       });
 
       if (!bookingResponse.success) {
@@ -63,6 +66,7 @@ export default function PaymentForm() {
 
       const booking = bookingResponse.data.booking;
       setBookingId(booking.id);
+      setBookingReference(booking.bookingReference);
 
       // Step 2: Create payment intent
       const paymentResponse = await createPaymentIntent({
@@ -307,6 +311,12 @@ export default function PaymentForm() {
               <div className="flex justify-between">
                 <span className="text-gray-600">Seats:</span>
                 <span className="font-medium">{selectedSeats?.length}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Travel Date:</span>
+                <span className="font-medium">
+                  {customerInfo?.travelDate ? new Date(customerInfo.travelDate).toLocaleDateString() : 'Not specified'}
+                </span>
               </div>
             </div>
 
