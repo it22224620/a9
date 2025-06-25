@@ -593,6 +593,25 @@ export class PaymentController {
             }
           }
         });
+      } else if (booking.status === 'confirmed') {
+        // If booking is already confirmed but seats aren't booked, fix the seats
+        const seatsResult = await Seat.confirmSeats(booking.seatIds, booking.travelDate);
+        
+        return res.json({
+          success: true,
+          message: 'Seats updated for already confirmed booking',
+          data: {
+            booking: {
+              id: booking.id,
+              reference: booking.bookingReference,
+              status: booking.status
+            },
+            seats: {
+              updated: seatsResult.success ? seatsResult.data.length : 0,
+              total: booking.seatIds.length
+            }
+          }
+        });
       }
       
       return res.json({
