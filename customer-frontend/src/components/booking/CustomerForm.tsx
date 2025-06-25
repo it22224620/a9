@@ -12,7 +12,7 @@ interface CustomerFormData {
   email: string;
   phone: string;
   message?: string;
-  travelDate: string; // NEW: Travel date
+  travelDate: string; // Travel date
 }
 
 export default function CustomerForm() {
@@ -58,7 +58,7 @@ export default function CustomerForm() {
             className="bg-white rounded-2xl p-8 shadow-lg"
           >
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-              {/* Travel Date - NEW */}
+              {/* Travel Date - REQUIRED */}
               <div className="form-group">
                 <label className="form-label flex items-center space-x-2">
                   <Calendar className="w-4 h-4 text-gray-500" />

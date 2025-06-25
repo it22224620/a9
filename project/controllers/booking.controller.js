@@ -89,6 +89,10 @@ export class BookingController {
         });
       }
 
+      console.log(`✅ Booking created successfully: ${bookingResult.data.bookingReference}`);
+      console.log(`📅 Travel date: ${bookingResult.data.travelDate}`);
+      console.log(`💺 Seats: ${seatIds.length} seats locked`);
+
       res.status(201).json({
         success: true,
         message: 'Booking created successfully',
@@ -212,9 +216,9 @@ export class BookingController {
         });
       }
 
-      // Confirm seats
+      // Confirm seats with travel date
       const booking = bookingResult.data;
-      const seatsResult = await Seat.confirmSeats(booking.seatIds);
+      const seatsResult = await Seat.confirmSeats(booking.seatIds, booking.travelDate);
       
       if (!seatsResult.success) {
         // Rollback booking status
@@ -224,6 +228,10 @@ export class BookingController {
           message: 'Failed to confirm seats'
         });
       }
+
+      console.log(`✅ Booking confirmed: ${booking.bookingReference}`);
+      console.log(`📅 Travel date: ${booking.travelDate}`);
+      console.log(`💺 Seats booked: ${booking.seatIds.length}`);
 
       res.json({
         success: true,
@@ -267,6 +275,9 @@ export class BookingController {
 
       // Unlock seats
       await Seat.unlockSeats(booking.seatIds);
+
+      console.log(`❌ Booking cancelled: ${booking.bookingReference}`);
+      console.log(`🔓 Seats unlocked: ${booking.seatIds.length}`);
 
       res.json({
         success: true,

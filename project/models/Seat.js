@@ -12,13 +12,19 @@ export class Seat {
     this.createdAt = data.created_at;
   }
 
-  static async findByVehicle(vehicleId) {
+  static async findByVehicle(vehicleId, travelDate = null) {
     try {
-      const { data, error } = await supabase
+      let query = supabase
         .from('seats')
         .select('*')
-        .eq('vehicle_id', vehicleId)
-        .order('seat_number', { ascending: true });
+        .eq('vehicle_id', vehicleId);
+
+      // If travel date is provided, get seats available for that date
+      if (travelDate) {
+        query = query.or(`booking_date.is.null,booking_date.neq.${travelDate}`);
+      }
+
+      const { data, error } = await query.order('seat_number', { ascending: true });
 
       if (error) throw error;
       return { success: true, data: data.map(seat => new Seat(seat)) };
@@ -27,18 +33,25 @@ export class Seat {
     }
   }
 
-  // NEW: Find seats by vehicle and date
+  // NEW: Find seats by vehicle and date using the database function
   static async findByVehicleAndDate(vehicleId, travelDate) {
     try {
       const { data, error } = await supabase
-        .from('seats')
-        .select('*')
-        .eq('vehicle_id', vehicleId)
-        .or(`booking_date.is.null,booking_date.eq.${travelDate}`)
-        .order('seat_number', { ascending: true });
+        .rpc('get_seat_availability_by_date', {
+          p_vehicle_id: vehicleId,
+          p_travel_date: travelDate
+        });
 
       if (error) throw error;
-      return { success: true, data: data.map(seat => new Seat(seat)) };
+      return { success: true, data: data.map(seat => ({
+        id: seat.seat_id,
+        vehicleId: vehicleId,
+        seatNumber: seat.seat_number,
+        status: seat.status,
+        isAvailableForDate: seat.is_available_for_date,
+        bookingDate: seat.booking_date,
+        customerEmail: seat.customer_email
+      })) };
     } catch (error) {
       return { success: false, error: error.message };
     }
@@ -99,12 +112,12 @@ export class Seat {
     }
   }
 
-  // FIXED: Properly book seats when payment is successful
+  // UPDATED: Properly book seats when payment is successful
   static async confirmSeats(seatIds, travelDate = null) {
     try {
       const updateData = { status: 'booked' };
       
-      // Keep the booking date when confirming
+      // Set the booking date when confirming
       if (travelDate) {
         updateData.booking_date = travelDate;
       }
@@ -153,16 +166,17 @@ export class Seat {
 
   static async getAvailableSeats(vehicleId, travelDate = null) {
     try {
+      if (travelDate) {
+        // Use the new function for date-specific availability
+        return await this.findByVehicleAndDate(vehicleId, travelDate);
+      }
+
+      // Fallback to original method
       let query = supabase
         .from('seats')
         .select('*')
         .eq('vehicle_id', vehicleId)
         .eq('status', 'available');
-
-      // Filter by travel date if provided
-      if (travelDate) {
-        query = query.or(`booking_date.is.null,booking_date.neq.${travelDate}`);
-      }
 
       const { data, error } = await query.order('seat_number', { ascending: true });
 

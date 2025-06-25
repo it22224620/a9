@@ -94,8 +94,8 @@ export class PaymentController {
         
         // Required parameters
         merchant_id: merchantId,
-        return_url: `${process.env.FRONTEND_URL || 'http://localhost:3002'}/booking/success?booking=${booking.bookingReference}`,
-        cancel_url: `${process.env.FRONTEND_URL || 'http://localhost:3002'}/booking?step=5&error=cancelled`,
+        return_url: `${process.env.FRONTEND_URL || 'http://localhost'}/booking/success?booking=${booking.bookingReference}`,
+        cancel_url: `${process.env.FRONTEND_URL || 'http://localhost'}/booking?step=5&error=cancelled`,
         notify_url: `${req.protocol}://${req.get('host')}/api/payment/webhook`,
         
         // Order details
@@ -309,39 +309,14 @@ export class PaymentController {
         });
       }
 
-      // Handle booking confirmation or cancellation
+      // The database trigger will automatically handle booking confirmation and seat booking
+      // But let's also log the success for monitoring
       if (shouldConfirmBooking) {
-        try {
-          const bookingResult = await Booking.updateStatus(payment.bookingId, 'confirmed');
-          if (bookingResult.success) {
-            const booking = bookingResult.data;
-            
-            // FIXED: Properly book seats with travel date
-            const seatsResult = await Seat.confirmSeats(booking.seatIds, booking.travelDate);
-            if (seatsResult.success) {
-              console.log(`✅ Payment successful, booking confirmed, seats booked for ${booking.travelDate}: ${payment.bookingId}`);
-            } else {
-              console.error('❌ Failed to confirm seats after successful payment');
-              await Booking.updateStatus(payment.bookingId, 'pending');
-            }
-          } else {
-            console.error('❌ Failed to confirm booking after successful payment');
-          }
-        } catch (bookingError) {
-          console.error('❌ Error confirming booking:', bookingError);
-        }
+        console.log(`✅ Payment successful for booking: ${payment.bookingId}`);
+        console.log(`🎫 Database trigger will automatically confirm booking and book seats`);
       } else if (paymentStatus === 'failed') {
-        try {
-          const bookingResult = await Booking.findById(payment.bookingId);
-          if (bookingResult.success) {
-            const booking = bookingResult.data;
-            await Booking.updateStatus(payment.bookingId, 'cancelled');
-            await Seat.unlockSeats(booking.seatIds);
-            console.log(`❌ Payment failed, booking cancelled, seats unlocked: ${payment.bookingId}`);
-          }
-        } catch (bookingError) {
-          console.error('❌ Error cancelling booking:', bookingError);
-        }
+        console.log(`❌ Payment failed for booking: ${payment.bookingId}`);
+        console.log(`🔓 Database trigger will automatically cancel booking and unlock seats`);
       }
 
       res.status(200).json({
