@@ -1,6 +1,7 @@
 import { Vehicle } from '../models/Vehicle.js';
 import { Route } from '../models/Route.js';
 import { Seat } from '../models/Seat.js';
+import { supabase } from '../config/db.js';
 
 export class VehicleController {
   static async getVehiclesByRoute(req, res) {
@@ -129,8 +130,44 @@ export class VehicleController {
   static async getSeatLayout(req, res) {
     try {
       const { vehicleId } = req.params;
+      const { travelDate } = req.query;
 
-      const seatsResult = await Seat.findByVehicle(vehicleId);
+      console.log(`🪑 Getting seat layout for vehicle: ${vehicleId}, travel date: ${travelDate}`);
+
+      let seatsResult;
+      
+      if (travelDate) {
+        // Use the database function to get date-specific availability
+        const { data, error } = await supabase
+          .rpc('get_seat_availability_by_date', {
+            p_vehicle_id: vehicleId,
+            p_travel_date: travelDate
+          });
+
+        if (error) {
+          console.error('Database function error:', error);
+          throw error;
+        }
+
+        // Transform the data to match our Seat model
+        const seats = data.map(seat => ({
+          id: seat.seat_id,
+          vehicleId: vehicleId,
+          seatNumber: seat.seat_number,
+          status: seat.is_available_for_date ? 'available' : seat.status,
+          bookingDate: seat.booking_date,
+          customerEmail: seat.customer_email,
+          lockedAt: seat.locked_at
+        }));
+
+        console.log(`📊 Found ${seats.length} seats, ${seats.filter(s => s.status === 'available').length} available for ${travelDate}`);
+
+        seatsResult = { success: true, data: seats };
+      } else {
+        // Fallback to regular seat layout without date filtering
+        seatsResult = await Seat.findByVehicle(vehicleId);
+      }
+
       if (!seatsResult.success) {
         return res.status(500).json({
           success: false,
@@ -156,7 +193,7 @@ export class VehicleController {
 
   static async lockSeats(req, res) {
     try {
-      const { seatIds, customerEmail } = req.body;
+      const { seatIds, customerEmail, travelDate } = req.body;
 
       if (!seatIds || !Array.isArray(seatIds) || seatIds.length === 0) {
         return res.status(400).json({
@@ -172,13 +209,17 @@ export class VehicleController {
         });
       }
 
-      const lockResult = await Seat.lockSeats(seatIds, customerEmail);
+      console.log(`🔒 Locking ${seatIds.length} seats for ${customerEmail} on ${travelDate}`);
+
+      const lockResult = await Seat.lockSeats(seatIds, customerEmail, travelDate);
       if (!lockResult.success) {
         return res.status(400).json({
           success: false,
           message: lockResult.error
         });
       }
+
+      console.log(`✅ Successfully locked ${seatIds.length} seats for travel date: ${travelDate}`);
 
       res.json({
         success: true,
@@ -201,13 +242,19 @@ export class VehicleController {
 
   static async unlockExpiredSeats(req, res) {
     try {
-      const result = await Seat.unlockExpiredSeats();
+      const { data, error } = await supabase.rpc('cleanup_expired_seat_locks');
+      
+      if (error) throw error;
+      
+      const unlockedCount = data && data.length > 0 ? data[0].unlocked_count : 0;
+      
+      console.log(`🔓 Unlocked ${unlockedCount} expired seats`);
       
       res.json({
         success: true,
-        message: `Unlocked ${result.count || 0} expired seats`,
+        message: `Unlocked ${unlockedCount} expired seats`,
         data: {
-          unlockedCount: result.count || 0
+          unlockedCount
         }
       });
 

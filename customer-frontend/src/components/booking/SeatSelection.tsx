@@ -12,6 +12,7 @@ interface Seat {
   seatNumber: number;
   status: 'available' | 'pending' | 'booked';
   customerEmail?: string;
+  bookingDate?: string;
 }
 
 export default function SeatSelection() {
@@ -22,17 +23,25 @@ export default function SeatSelection() {
   const [locking, setLocking] = useState(false);
 
   useEffect(() => {
-    if (selectedVehicle) {
+    if (selectedVehicle && customerInfo?.travelDate) {
       fetchSeats();
     }
-  }, [selectedVehicle]);
+  }, [selectedVehicle, customerInfo?.travelDate]);
 
   const fetchSeats = async () => {
-    if (!selectedVehicle) return;
+    if (!selectedVehicle || !customerInfo?.travelDate) return;
 
     try {
-      const response = await getSeatLayout(selectedVehicle.id);
+      console.log(`🪑 Fetching seats for vehicle ${selectedVehicle.id} on ${customerInfo.travelDate}`);
+      
+      // Pass travel date to get date-specific availability
+      const response = await getSeatLayout(selectedVehicle.id, customerInfo.travelDate);
       if (response.success) {
+        console.log(`📊 Received ${response.data.length} seats:`, response.data.map(s => ({
+          number: s.seatNumber,
+          status: s.status,
+          bookingDate: s.bookingDate
+        })));
         setSeats(response.data);
       } else {
         toast.error('Failed to load seat layout');
@@ -46,12 +55,17 @@ export default function SeatSelection() {
   };
 
   const handleSeatClick = (seat: Seat) => {
-    if (seat.status !== 'available') return;
+    if (seat.status !== 'available') {
+      console.log(`❌ Seat ${seat.seatNumber} is not available (status: ${seat.status})`);
+      return;
+    }
 
     setSelectedSeatIds(prev => {
       if (prev.includes(seat.id)) {
+        console.log(`🔄 Deselecting seat ${seat.seatNumber}`);
         return prev.filter(id => id !== seat.id);
       } else {
+        console.log(`✅ Selecting seat ${seat.seatNumber}`);
         return [...prev, seat.id];
       }
     });
@@ -63,18 +77,21 @@ export default function SeatSelection() {
       return;
     }
 
-    // Check if we have customer email from previous step
-    if (!customerInfo?.email) {
-      toast.error('Customer email is required. Please go back and fill in your details.');
+    // Check if we have customer email and travel date from previous step
+    if (!customerInfo?.email || !customerInfo?.travelDate) {
+      toast.error('Customer information is required. Please go back and fill in your details.');
       return;
     }
 
     setLocking(true);
     try {
-      const response = await lockSeats(selectedSeatIds, customerInfo.email);
+      console.log(`🔒 Locking ${selectedSeatIds.length} seats for ${customerInfo.email} on ${customerInfo.travelDate}`);
+      
+      const response = await lockSeats(selectedSeatIds, customerInfo.email, customerInfo.travelDate);
       if (response.success) {
         setSelectedSeats(selectedSeatIds);
         toast.success(`${selectedSeatIds.length} seat(s) reserved for 10 minutes`);
+        console.log(`✅ Successfully locked seats for travel date: ${customerInfo.travelDate}`);
         nextStep();
       } else {
         toast.error('Failed to reserve seats. Please try again.');
@@ -122,7 +139,7 @@ export default function SeatSelection() {
                   onClick={() => handleSeatClick(seat)}
                   className={getSeatClass(seat)}
                   disabled={seat.status !== 'available'}
-                  title={`Seat ${seat.seatNumber} - ${seat.status}`}
+                  title={`Seat ${seat.seatNumber} - ${seat.status}${seat.bookingDate ? ` (booked for ${seat.bookingDate})` : ''}`}
                 >
                   {selectedSeatIds.includes(seat.id) ? (
                     <Check className="w-4 h-4" />
@@ -163,6 +180,11 @@ export default function SeatSelection() {
           <p className="text-gray-600">
             Choose your preferred seats in the{' '}
             <span className="font-semibold text-primary-600">{selectedVehicle?.name}</span>
+            {customerInfo?.travelDate && (
+              <span className="block text-sm text-gray-500 mt-1">
+                Travel Date: {new Date(customerInfo.travelDate).toLocaleDateString()}
+              </span>
+            )}
           </p>
         </div>
         <div></div>
@@ -223,6 +245,12 @@ export default function SeatSelection() {
                 <span className="font-medium capitalize">{selectedVehicle?.bookingType}</span>
               </div>
               <div className="flex justify-between">
+                <span className="text-gray-600">Travel Date:</span>
+                <span className="font-medium">
+                  {customerInfo?.travelDate ? new Date(customerInfo.travelDate).toLocaleDateString() : 'Not set'}
+                </span>
+              </div>
+              <div className="flex justify-between">
                 <span className="text-gray-600">Selected Seats:</span>
                 <span className="font-medium">{selectedSeatIds.length}</span>
               </div>
@@ -276,6 +304,7 @@ export default function SeatSelection() {
                 <p><strong>Name:</strong> {customerInfo.customerName}</p>
                 <p><strong>Email:</strong> {customerInfo.email}</p>
                 <p><strong>Phone:</strong> {customerInfo.phone}</p>
+                <p><strong>Travel Date:</strong> {customerInfo.travelDate ? new Date(customerInfo.travelDate).toLocaleDateString() : 'Not set'}</p>
               </div>
             </div>
           )}
@@ -292,9 +321,9 @@ export default function SeatSelection() {
         </button>
         <button
           onClick={handleContinue}
-          disabled={selectedSeatIds.length === 0 || locking || !customerInfo?.email}
+          disabled={selectedSeatIds.length === 0 || locking || !customerInfo?.email || !customerInfo?.travelDate}
           className={`px-8 py-3 rounded-xl font-semibold transition-all duration-300 ${
-            selectedSeatIds.length > 0 && !locking && customerInfo?.email
+            selectedSeatIds.length > 0 && !locking && customerInfo?.email && customerInfo?.travelDate
               ? 'bg-primary-600 hover:bg-primary-700 text-white shadow-lg hover:shadow-xl transform hover:scale-105'
               : 'bg-gray-300 text-gray-500 cursor-not-allowed'
           }`}

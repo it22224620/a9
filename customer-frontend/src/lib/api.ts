@@ -38,15 +38,17 @@ export const getVehicleDetails = async (vehicleId: string) => {
 };
 
 // Seats API
-export const getSeatLayout = async (vehicleId: string) => {
-  const response = await api.get(`/api/seats/${vehicleId}`);
+export const getSeatLayout = async (vehicleId: string, travelDate?: string) => {
+  const params = travelDate ? { travelDate } : {};
+  const response = await api.get(`/api/seats/${vehicleId}`, { params });
   return response.data;
 };
 
-export const lockSeats = async (seatIds: string[], customerEmail: string) => {
+export const lockSeats = async (seatIds: string[], customerEmail: string, travelDate?: string) => {
   const response = await api.post('/api/seats/lock', {
     seatIds,
     customerEmail,
+    travelDate,
   });
   return response.data;
 };
@@ -61,6 +63,7 @@ export const createBooking = async (bookingData: {
   vehicleId: string;
   seatIds: string[];
   bookingType: string;
+  travelDate?: string;
 }) => {
   const response = await api.post('/api/booking/create', bookingData);
   return response.data;
