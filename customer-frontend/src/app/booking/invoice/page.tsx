@@ -3,7 +3,8 @@
 import React, { useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { Download, Printer, Calendar, MapPin, Users, CreditCard, Phone, Mail, Car } from 'lucide-react';
+import { Download, Printer, Calendar, MapPin, Users, CreditCard, Phone, Mail, Car, ArrowLeft } from 'lucide-react';
+import Link from 'next/link';
 import { getBookingStatus } from '../../../lib/api';
 import toast from 'react-hot-toast';
 
@@ -129,7 +130,14 @@ Contact: +94 77 123 4567 | info@naturetravel.lk
       <div className="min-h-screen bg-white flex items-center justify-center">
         <div className="text-center">
           <h1 className="text-3xl font-bold text-red-600 mb-4">Invoice Not Found</h1>
-          <p className="text-gray-600">The booking reference could not be found.</p>
+          <p className="text-gray-600 mb-6">The booking reference could not be found.</p>
+          <Link
+            href="/"
+            className="inline-flex items-center px-6 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
+          >
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Back to Home
+          </Link>
         </div>
       </div>
     );
@@ -140,7 +148,16 @@ Contact: +94 77 123 4567 | info@naturetravel.lk
       {/* Print Controls - Hidden when printing */}
       <div className="no-print bg-gray-50 border-b border-gray-200 p-4">
         <div className="max-w-4xl mx-auto flex justify-between items-center">
-          <h1 className="text-xl font-semibold text-gray-900">Booking Invoice</h1>
+          <div className="flex items-center space-x-4">
+            <Link
+              href={`/booking/success?booking=${booking.bookingReference}`}
+              className="flex items-center space-x-2 text-gray-600 hover:text-gray-900 transition-colors"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              <span>Back to Booking</span>
+            </Link>
+            <h1 className="text-xl font-semibold text-gray-900">Booking Invoice</h1>
+          </div>
           <div className="flex space-x-3">
             <button
               onClick={downloadInvoice}
